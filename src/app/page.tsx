@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import {
   ShieldCheck,
@@ -180,6 +181,40 @@ export default function BunonPage() {
           </div>
         </div>
 
+        {/* Center Navigation Tabs */}
+        <nav className="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-white/10 text-xs">
+          <Link
+            href="/"
+            className="px-3 py-1.5 rounded-lg font-medium bg-indigo-600 text-white shadow-sm transition-all"
+          >
+            Compliance Engine
+          </Link>
+          <Link
+            href="/buyer-terminal"
+            className="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            EU Buyer Terminal
+          </Link>
+          <Link
+            href="/passport/DN-2026"
+            className="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            Passport (DPP)
+          </Link>
+          <Link
+            href="/audit-logs"
+            className="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            Audit Logs
+          </Link>
+          <Link
+            href="/settings"
+            className="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            Sovereign Node
+          </Link>
+        </nav>
+
         {/* Center: Live Architecture Telemetry Pills */}
         <div className="hidden xl:flex items-center gap-2 text-xs">
           <div className="glass-pill px-3 py-1.5 rounded-lg flex items-center gap-2 text-slate-300">
@@ -200,26 +235,15 @@ export default function BunonPage() {
         {/* Right View Switcher */}
         <div className="flex items-center gap-2">
           <div className="bg-slate-900/90 p-1 rounded-xl border border-white/10 flex items-center text-xs">
-            <button
-              onClick={() => setPortalMode("merchandiser")}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                portalMode === "merchandiser"
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
+            <span className="px-3 py-1.5 rounded-lg font-medium bg-indigo-600 text-white shadow-sm">
+              Factory View
+            </span>
+            <Link
+              href="/buyer-terminal"
+              className="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors"
             >
-              Merchandiser Portal
-            </button>
-            <button
-              onClick={() => setPortalMode("buyer")}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                portalMode === "buyer"
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              EU Buyer Terminal
-            </button>
+              Buyer View →
+            </Link>
           </div>
         </div>
       </header>
