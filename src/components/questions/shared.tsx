@@ -37,6 +37,8 @@ export interface Questionnaire {
   sentOn: string;
   dueOn: string;
   questions: Question[];
+  /** "open": answers and new questions allowed; "paused": unlink pending; "closed": unlinked, read-only. */
+  linkState?: "open" | "paused" | "closed";
 }
 export interface Payload {
   role: "factory" | "buyer";

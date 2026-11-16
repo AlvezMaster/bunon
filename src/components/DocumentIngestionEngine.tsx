@@ -177,7 +177,7 @@ export default function DocumentIngestionEngine({ isOpen, onClose, styleCode, ti
   const decideOutcome = (data: IngestResponse): InstallOutcome => {
     const entry = data.result.assessment.entry;
     const r = data.renewal;
-    if (r && entry && entry.licensee === tier.facilityName && r.tierId === tier.id) {
+    if (r && entry && data.installed?.tierId === tier.id && data.installed.styleCode === styleCode) {
       const renewal: TierRenewal = {
         certNumber: r.certNumber,
         certType: r.certType,

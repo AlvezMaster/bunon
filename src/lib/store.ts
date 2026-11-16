@@ -62,7 +62,7 @@ interface BunonState {
   visibleCodes: string[] | null;
   /** Companies this company is linked to, with the link status. */
   partners: Array<{ orgId: string; name: string; status: string }>;
-  addCustomStyle: (style: StyleData) => void;
+  addCustomStyle: (style: StyleData) => Promise<{ ok: boolean; error?: string }>;
 
   // --- per-style compliance state ---
   renewals: RenewalMap;
@@ -82,13 +82,15 @@ const noopStorage = {
   removeItem: () => undefined,
 };
 
-/** Saves a factory change to /api/catalog. The local state is already updated; a failure only logs. */
-async function saveToServer(body: Record<string, unknown>): Promise<void> {
+/** Saves a factory change to /api/catalog and reports whether the server accepted it. */
+async function saveToServer(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("/api/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!res.ok) console.warn("[bunon] could not save to server:", (await res.json().catch(() => ({}))).error ?? res.status);
+    if (res.ok) return { ok: true };
+    const error = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${res.status}`;
+    return { ok: false, error };
   } catch {
-    console.warn("[bunon] could not save to server: offline");
+    return { ok: false, error: "You seem to be offline. Nothing was saved." };
   }
 }
 
@@ -133,20 +135,21 @@ export const useBunonStore = create<BunonState>()(
       customStyles: {},
       visibleCodes: null,
       partners: [],
-      // Changes apply locally at once and are saved on the server, so buyers on other devices see them.
-      addCustomStyle: (style) => {
-        set((s) => ({
-          customStyles: { ...s.customStyles, [style.code]: style },
-          activeSupplierStyleId: style.code,
-          visibleCodes: s.visibleCodes && !s.visibleCodes.includes(style.code) ? [...s.visibleCodes, style.code] : s.visibleCodes,
-        }));
-        void saveToServer({ action: "order", style });
+      // A new order counts only once the server has saved it; then everyone loads the server's copy.
+      addCustomStyle: async (style) => {
+        const saved = await saveToServer({ action: "order", style });
+        if (saved.ok) {
+          set({ activeSupplierStyleId: style.code });
+          await get().refreshCatalog();
+        }
+        return saved;
       },
 
       renewals: {},
+      // The server already saved this renewal after checking the certificate (/api/ingest); show it at once, then reload.
       installRenewal: (styleCode, tierId, renewal) => {
         set((s) => ({ renewals: { ...s.renewals, [styleCode]: { ...(s.renewals[styleCode] ?? {}), [tierId]: renewal } } }));
-        void saveToServer({ action: "renewal", styleCode, tierId, renewal });
+        void get().refreshCatalog();
       },
       resetStyleCompliance: (styleCode) => {
         set((s) => {

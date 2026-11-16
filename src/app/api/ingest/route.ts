@@ -2,9 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { CERTIFICATE_DOCUMENT_FIXTURES, isCertificateScenario } from "@/lib/fixtures/certificate-documents";
 import { runIngestion, type IngestionResult } from "@/lib/server/ingestion";
 import { getSession } from "@/lib/server/auth";
+import { scopeFor, styleParties } from "@/lib/server/access";
+import { getCatalogState, saveRenewal } from "@/lib/server/catalog-repo";
+import { recordBlockParties } from "@/lib/server/ledger-parties";
 import { appendLedgerBlock } from "@/lib/server/ledger-repo";
 import type { LedgerBlock } from "@/lib/ledger";
-import type { TierRenewal } from "@/lib/styles";
+import { getStyleData, type TierId, type TierRenewal } from "@/lib/styles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +20,8 @@ export interface IngestResponse {
   /** Present when the certificate verified and belongs to a catalog tier. */
   renewal: (TierRenewal & { tierId: string }) | null;
   ledger: { sealed: true; block: LedgerBlock; source: string } | { sealed: false; reason: string };
+  /** Set when the server saved the renewal on the order (the only way a renewal is ever saved). */
+  installed: { styleCode: string; tierId: string } | null;
 }
 
 /**
@@ -24,10 +29,12 @@ export interface IngestResponse {
  *   multipart/form-data: `file` (PDF, text, JSON or image), optional `styleCode`, `allowSlm=false`
  *   or JSON: { scenario: "valid" | "expired" | "tampered", styleCode?, allowSlm? }
  *
- * Anyone may run the analysis (it only touches local resources). Sealing the result into the
- * ledger needs a factory session; otherwise `ledger.sealed` is false with the reason.
+ * Needs a signed-in account. For a factory, a certificate that verifies, belongs to the named
+ * supplier tier of one of its own orders, is saved on that order here, on the server.
  */
 export async function POST(req: NextRequest) {
+  const session = getSession(req);
+  if (!session) return NextResponse.json({ error: "Sign in to check a certificate." }, { status: 401 });
   const contentType = req.headers.get("content-type") ?? "";
   let styleCode: string | null = null;
   let result: IngestionResult;
@@ -76,30 +83,43 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
-  const session = getSession(req);
   let ledger: IngestResponse["ledger"];
-  if (!session) {
-    ledger = { sealed: false, reason: "Sign in to a factory account to seal this result into the ledger." };
-  } else if (session.role !== "factory") {
+  let installed: IngestResponse["installed"] = null;
+  if (session.role !== "factory") {
     ledger = { sealed: false, reason: "Only factory accounts can seal certificate ingestions." };
   } else {
     try {
+      const scope = await scopeFor(session);
       const engineLabel = result.engine === "ollama" ? `local model ${result.model}` : "rules engine";
       const { block, source } = await appendLedgerBlock({
         type: "CERT INGESTION",
-        actor: `${session.name} via ${engineLabel}`,
+        actor: `${scope.orgNameOf(scope.orgId)} via ${engineLabel}`,
         summary: `${result.assessment.headline} (${result.fileName}${styleCode ? `, order ${styleCode}` : ""})`,
         styleCode,
         payloadHash: result.documentSha256,
         status: result.assessment.verdict === "verified" ? "verified" : "flagged",
       });
       ledger = { sealed: true, block, source };
+
+      // Save the renewal only if the order is this factory's and the certificate names that tier's supplier.
+      if (renewal && entry && styleCode) {
+        const state = await getCatalogState();
+        const style = getStyleData(styleCode, state.customStyles);
+        const tier = style?.tiers.find((t) => t.id === renewal.tierId);
+        if (style && tier && styleParties(scope, style).factory === scope.orgId && tier.facilityName === entry.licensee) {
+          const { tierId, ...saved } = renewal;
+          await saveRenewal(style.code, tierId as TierId, saved);
+          installed = { styleCode: style.code, tierId };
+          const p = styleParties(scope, style);
+          await recordBlockParties(block.block, [p.factory, p.buyer]);
+        }
+      }
     } catch (error) {
       console.error("[bunon/ingest] ledger append failed:", error);
       ledger = { sealed: false, reason: "The ledger is unavailable; this result was not recorded." };
     }
   }
 
-  const response: IngestResponse = { success: true, result, renewal, ledger };
+  const response: IngestResponse = { success: true, result, renewal, ledger, installed };
   return NextResponse.json(response);
 }

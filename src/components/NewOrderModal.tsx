@@ -122,8 +122,14 @@ export default function NewOrderModal({ isOpen, onClose }: NewOrderModalProps) {
     setSubmitting(true);
     const buyer = linkedBuyers.find((p) => p.orgId === buyerChoice);
     const style = { ...createCustomStyle({ code: styleCode, title, garmentType, volume, destination, fiberComposition, buyer: buyer?.name }), buyerOrgId: buyer?.orgId };
-    // The order is created locally first, so a ledger failure never loses it.
-    addCustomStyle(style);
+    // The order exists only once the server has saved it.
+    const saved = await addCustomStyle(style);
+    if (!saved.ok) {
+      setCodeError(saved.error ? t(saved.error) : t("The order could not be saved. Try again."));
+      setSubmitting(false);
+      firstFieldRef.current?.focus();
+      return;
+    }
 
     let root = "";
     let ledger: LedgerPostResult;

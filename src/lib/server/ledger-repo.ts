@@ -153,7 +153,7 @@ async function d1Append(input: LedgerBlockInput, time: string): Promise<LedgerBl
 
 // ----------------------------------------------------------------------------- public API
 export async function listLedger(limit = 100): Promise<LedgerListResult> {
-  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 500);
+  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 1000);
   let source = await getDataSourceKind();
   let blocks: LedgerBlock[];
   if (source === "d1") {

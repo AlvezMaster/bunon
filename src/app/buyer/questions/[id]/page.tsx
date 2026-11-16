@@ -60,6 +60,13 @@ export default function BuyerQuestionnaire() {
           <>
             <QuestionnaireHeader q={q} data={data} back="/buyer/questions" />
 
+            {q.linkState && q.linkState !== "open" ? (
+              <p role="status" className="rounded-lg border border-line bg-surface-2/70 px-4 py-3 text-sm text-ink-muted">
+                {q.linkState === "paused"
+                  ? `${t("An unlink with")} ${factory} ${t("is pending, so new questions are paused.")}`
+                  : `${t("You are no longer linked with")} ${factory}. ${t("Answers stay readable for 30 days; download them from Your factories.")}`}
+              </p>
+            ) : (
             <form onSubmit={ask} className="glass-card flex flex-col gap-3 p-5 sm:p-6" noValidate>
               <label htmlFor="ask" className="font-display text-lg font-semibold text-ink">
                 {t("Ask")} {factory} {t("a new question")}
@@ -98,6 +105,7 @@ export default function BuyerQuestionnaire() {
                 </p>
               )}
             </form>
+            )}
 
             <Tabs
               value={tab}

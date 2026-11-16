@@ -3,8 +3,8 @@ import { LedgerValidationError, parseLedgerInput, type LedgerBlockInput } from "
 import { canAppendEvent } from "@/lib/ledger-policy";
 import { getSession, requireSession } from "@/lib/server/auth";
 import { appendLedgerBlock, listLedger } from "@/lib/server/ledger-repo";
-import { canSeeStyle, questionnaireParties, scopeFor } from "@/lib/server/access";
-import { getBlockParties } from "@/lib/server/ledger-parties";
+import { canSeeStyle, questionnaireParties, scopeFor, styleParties } from "@/lib/server/access";
+import { getBlockParties, recordBlockParties } from "@/lib/server/ledger-parties";
 import { getCatalogState } from "@/lib/server/catalog-repo";
 import { STYLES_CATALOG, getStyleData } from "@/lib/styles";
 import { QUESTIONNAIRES } from "@/lib/questionnaire";
@@ -78,9 +78,18 @@ export async function POST(req: NextRequest) {
   if (!canAppendEvent(guard.session.role, input.type)) {
     return NextResponse.json({ error: `Your role may not record ${input.type} events.`, code: "FORBIDDEN" }, { status: 403 });
   }
+  // Every client-recorded event is about one order, and it must be an order this company is part of.
+  const scope = await scopeFor(guard.session);
+  const state = await getCatalogState();
+  const style = input.styleCode ? getStyleData(input.styleCode, state.customStyles) : null;
+  if (!style || !canSeeStyle(scope, style)) {
+    return NextResponse.json({ error: "You can only record events for your own orders.", code: "FORBIDDEN" }, { status: 403 });
+  }
 
   try {
-    const { block, source } = await appendLedgerBlock(input);
+    const { block, source } = await appendLedgerBlock({ ...input, actor: scope.orgNameOf(scope.orgId) });
+    const p = styleParties(scope, style);
+    await recordBlockParties(block.block, [p.factory, p.buyer]);
     return NextResponse.json({ success: true, source, block }, { status: 201 });
   } catch (error) {
     console.error("[bunon/ledger] POST error:", error);

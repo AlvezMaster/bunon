@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/server/auth";
 import { scopeFor } from "@/lib/server/access";
-import { acceptInvite, createInvite, getFactoryProfile, invitesForFactory, revokeInvite, saveLink } from "@/lib/server/accounts-repo";
+import { acceptInvite, applyLinkStep, createInvite, getFactoryProfile, invitesForFactory, revokeInvite } from "@/lib/server/accounts-repo";
 import { logLinkEvent, runLinkJobs } from "@/lib/server/lifecycle";
 import { agreeUnlink, cancelUnlink, inviteState, partnerOf, requestUnlink, type Link } from "@/lib/links";
 
@@ -88,9 +88,8 @@ export async function POST(req: NextRequest) {
     const link: Link | undefined = scope.links.find((l) => l.id === body.linkId);
     if (!link) return fail("Unknown link.", 404);
     const step = body.action === "unlink" ? requestUnlink : body.action === "cancel" ? cancelUnlink : agreeUnlink;
-    const result = step(link, scope.orgId);
+    const result = await applyLinkStep(link.id, (current) => step(current, scope.orgId));
     if (!result.ok) return fail(result.error, 409);
-    await saveLink(result.link);
     await logLinkEvent(body.action === "unlink" ? "UNLINK REQUESTED" : body.action === "cancel" ? "UNLINK CANCELLED" : "UNLINKED", result.link, me);
     return NextResponse.json({ ok: true, status: result.link.status });
   }

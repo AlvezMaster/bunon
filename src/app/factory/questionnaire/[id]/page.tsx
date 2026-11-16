@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { FileText, PenLine, RefreshCw, Send, Sparkles } from "lucide-react";
+import { FileText, Info, PenLine, RefreshCw, Send, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import {
   QuestionHead,
@@ -44,6 +44,8 @@ export default function FactoryQuestionnaire() {
   const q = data?.questionnaires.find((x) => x.id === id);
   const docOf = (docId: string | null) => data?.documents.find((d) => d.id === docId);
   const buyer = q ? orgName(q.buyer) : "";
+  const ai = !!data?.model;
+  const closed = q?.linkState === "closed";
 
   const draft = async (qid: string) => {
     setBusy((b) => ({ ...b, [qid]: "drafting" }));
@@ -122,6 +124,7 @@ export default function FactoryQuestionnaire() {
         {data && q && (
           <>
             <QuestionnaireHeader q={q} data={data} back="/factory/questionnaire">
+              {!closed && (
               <button type="button" onClick={() => void draftAll()} disabled={!!bulk || todo.length === 0} className="btn-primary-action">
                 {bulk ? (
                   <>
@@ -131,17 +134,34 @@ export default function FactoryQuestionnaire() {
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" aria-hidden="true" />
-                    {t("Draft all with AI")}
+                    {ai ? t("Draft all with AI") : t("Suggest all from documents")}
                   </>
                 )}
               </button>
+              )}
             </QuestionnaireHeader>
 
-            <p className="-mt-2 max-w-[65ch] text-sm text-ink-muted">
-              {data.model
-                ? `${t("AI drafts each answer from your documents and quotes the sentence it used. Nothing reaches")} ${buyer} ${t("until you press Send.")}`
-                : `${t("The local AI is off, so each question shows the most relevant document. Nothing reaches")} ${buyer} ${t("until you press Send.")}`}
-            </p>
+            {closed ? (
+              <p role="status" className="flex items-start gap-2 rounded-lg border border-line bg-surface-2/70 px-4 py-3 text-sm text-ink-muted">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  {t("You are no longer linked with")} {buyer}. {t("These answers are read-only. Download them from the Buyers page while the 30-day window lasts.")}
+                </span>
+              </p>
+            ) : ai ? (
+              <p className="-mt-2 max-w-[65ch] text-sm text-ink-muted">
+                {`${t("AI drafts each answer from your documents and quotes the sentence it used. Nothing reaches")} ${buyer} ${t("until you press Send.")}`}
+              </p>
+            ) : (
+              <p role="note" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-ink-muted">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>
+                  <strong className="text-ink">{t("Online demo: no AI here.")}</strong>{" "}
+                  {t("Bunon's AI model runs on the factory's own computer. On this website, rules find the matching sentence in your documents instead. Nothing reaches")}{" "}
+                  {buyer} {t("until you press Send.")}
+                </span>
+              </p>
+            )}
 
             <Tabs
               value={tab}
@@ -172,6 +192,8 @@ export default function FactoryQuestionnaire() {
 
                     {approved ? (
                       <SentAnswer a={approved} doc={docOf(approved.docId)} />
+                    ) : closed ? (
+                      <p className="text-sm text-ink-faint">{t("Not answered before the unlink.")}</p>
                     ) : !editing && !d ? (
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -185,7 +207,7 @@ export default function FactoryQuestionnaire() {
                           ) : (
                             <Sparkles className="h-4 w-4" aria-hidden="true" />
                           )}
-                          {state === "drafting" ? t("Drafting…") : t("Draft with AI")}
+                          {state === "drafting" ? t("Drafting…") : ai ? t("Draft with AI") : t("Suggest from documents")}
                         </button>
                         <button
                           type="button"
@@ -244,7 +266,7 @@ export default function FactoryQuestionnaire() {
                             className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 text-sm font-medium text-ink-muted hover:text-ink"
                           >
                             <RefreshCw className={`h-4 w-4 ${state === "drafting" ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
-                            {d ? t("Draft again") : t("Draft with AI")}
+                            {d ? t("Draft again") : ai ? t("Draft with AI") : t("Suggest from documents")}
                           </button>
                         </div>
                         {d && (

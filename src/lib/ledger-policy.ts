@@ -1,12 +1,13 @@
 /**
- * Role-based rules for who may append which ledger events (shared by the API and the UI).
+ * Which ledger events a browser may ask the server to record (shared by the API and the UI).
+ * Everything else (certificate checks, answers, links, deletions) is written by the server itself.
  */
 import type { UserRole } from "./server/session.ts";
 
 export const BUYER_EVENT_TYPES = ["BUYER QUERY", "BUYER AUDIT VERIFICATION"] as const;
+export const FACTORY_EVENT_TYPES = ["ORDER BOM INGESTION", "SUPPLIER CHASE"] as const;
 
-/** Buyers may only record buyer-side events; factory users may record everything else. */
 export function canAppendEvent(role: UserRole, type: string): boolean {
-  const isBuyerEvent = (BUYER_EVENT_TYPES as readonly string[]).includes(type.toUpperCase());
-  return role === "buyer" ? isBuyerEvent : !isBuyerEvent;
+  const list: readonly string[] = role === "buyer" ? BUYER_EVENT_TYPES : FACTORY_EVENT_TYPES;
+  return list.includes(type.toUpperCase());
 }

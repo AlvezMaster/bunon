@@ -13,6 +13,27 @@ import {
   type Link,
 } from "../src/lib/links.ts";
 import { checkSignup } from "../src/lib/signup-rules.ts";
+import { canAppendEvent } from "../src/lib/ledger-policy.ts";
+import { STYLES_CATALOG, applyRenewals, styleClearance, tierStatusOn } from "../src/lib/styles.ts";
+
+test("browsers may record only their role's own event types", () => {
+  assert.ok(canAppendEvent("buyer", "BUYER QUERY"));
+  assert.ok(canAppendEvent("factory", "SUPPLIER CHASE"));
+  for (const t of ["ANSWER APPROVED", "LINK CREATED", "SHARED DATA DELETED", "CERT INGESTION"]) {
+    assert.equal(canAppendEvent("factory", t), false, t);
+    assert.equal(canAppendEvent("buyer", t), false, t);
+  }
+  assert.equal(canAppendEvent("factory", "BUYER QUERY"), false);
+});
+
+test("a certificate past its date counts as expired everywhere, even after a renewal", () => {
+  assert.equal(tierStatusOn({ status: "verified", validThrough: "2026-01-01" }, "2026-11-16"), "expired");
+  assert.equal(tierStatusOn({ status: "verified", validThrough: "2027-01-01" }, "2026-11-16"), "verified");
+  const style = STYLES_CATALOG["DN-2026"];
+  const tier = style.tiers[0];
+  const stale = applyRenewals(style, { [tier.id]: { certNumber: "X", certType: "Y", validThrough: "2020-01-01", documentSha256: "0".repeat(64), ingestedAt: "", engine: "rules" } });
+  assert.equal(styleClearance(stale).cleared, false);
+});
 
 const T0 = Date.parse("2026-12-01T10:00:00Z");
 const link: Link = { id: "lnk-1", factoryOrgId: "f", buyerOrgId: "b", createdAt: "2026-10-01T00:00:00Z", via: "invite", status: "active" };

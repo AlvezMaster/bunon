@@ -31,6 +31,8 @@ let warnedAboutFallback = false;
 export function getSessionSecret(): string {
   const configured = process.env.BUNON_SESSION_SECRET?.trim();
   if (configured && configured.length >= 16) return configured;
+  // On Vercel a missing secret is a setup error, not something to paper over: anyone could forge a session.
+  if (process.env.VERCEL_ENV) throw new Error("BUNON_SESSION_SECRET must be set (16+ characters) on this deployment.");
   if (!warnedAboutFallback) {
     warnedAboutFallback = true;
     console.warn(

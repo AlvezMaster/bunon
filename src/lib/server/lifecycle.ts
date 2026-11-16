@@ -2,12 +2,12 @@
  * Link events: writes them to the ledger, finishes 12-hour holds, and deletes shared data when a
  * 30-day export window ends. Safe to run often (every page load of the links API, and a daily cron).
  */
-import { kvUpdate } from "./kv.ts";
+import { kvRead, kvUpdate } from "./kv.ts";
 import { LINKS_KEY, orgIndex, seedLinks } from "./accounts-repo.ts";
 import { appendLedgerBlock } from "./ledger-repo.ts";
 import { recordBlockParties } from "./ledger-parties.ts";
 import { deleteSharedAnswers, getCatalogState } from "./catalog-repo.ts";
-import { settle, type Link } from "../links.ts";
+import { isReadable, settle, type Link } from "../links.ts";
 import { QUESTIONNAIRES } from "../questionnaire.ts";
 import { canonicalJson, sha256Hex } from "../crypto.ts";
 
@@ -52,7 +52,10 @@ export async function runLinkJobs(now = Date.now()): Promise<number> {
   const state = await getCatalogState();
   for (const { before, after } of changed) {
     if (before.status === "unlink_pending") await logLinkEvent("UNLINKED", after, "Bunon (12-hour hold ended)");
-    if (after.status === "purged") {
+    const newer = Object.values(await kvRead<Record<string, Link>>(LINKS_KEY, seedLinks)).some(
+      (l) => l.id !== after.id && l.factoryOrgId === after.factoryOrgId && l.buyerOrgId === after.buyerOrgId && isReadable(settle(l, now))
+    );
+    if (after.status === "purged" && !newer) {
       const pair = QUESTIONNAIRES.filter((q) => idx.idByName(q.factory) === after.factoryOrgId && idx.idByName(q.buyer) === after.buyerOrgId);
       const questionIds = pair.flatMap((q) => [...q.questions.map((x) => x.id), ...(state.asked[q.id] ?? []).map((x) => x.id)]);
       await deleteSharedAnswers(questionIds, pair.map((q) => q.id));

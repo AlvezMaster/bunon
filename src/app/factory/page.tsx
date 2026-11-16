@@ -61,7 +61,9 @@ export default function FactoryDashboard() {
       </>
     );
 
-  const toAnswer = questions ? questions.questionnaires.reduce((n, q) => n + q.questions.filter((x) => !questions.answers[x.id]).length, 0) : undefined;
+  const toAnswer = questions
+    ? questions.questionnaires.filter((q) => q.linkState !== "closed").reduce((n, q) => n + q.questions.filter((x) => !questions.answers[x.id]).length, 0)
+    : undefined;
   const buyers = partners.filter((p) => p.status === "active" || p.status === "unlink_pending").length;
   const expiredCount = attention.filter((a) => a.expired).length;
 
@@ -70,7 +72,7 @@ export default function FactoryDashboard() {
     attention.length
       ? { href: "#needs-attention", Icon: ShieldAlert, title: "Renew certificates", note: expiredCount ? "Some have expired; orders are on hold" : "Some expire within 90 days", count: attention.length, primary: expiredCount > 0 }
       : { href: "/factory/orders", Icon: ShieldCheck, title: "Certificates", note: "All in date. See every order", count: 0 },
-    { href: "/factory/questionnaire", Icon: MessageSquareText, title: "Answer buyer questions", note: "AI drafts from your documents", count: toAnswer, primary: !expiredCount && !!toAnswer },
+    { href: "/factory/questionnaire", Icon: MessageSquareText, title: "Answer buyer questions", note: "Answers come from your documents", count: toAnswer, primary: !expiredCount && !!toAnswer },
     { href: "/factory/buyers", Icon: UserPlus, title: "Invite a buyer", note: "Send a link to connect", count: buyers },
     { href: "/factory/order?new=1", Icon: FilePlus2, title: "Add an order", note: "Track its certificates" },
   ];

@@ -151,6 +151,10 @@ export default function SignupPage() {
             </p>
           </div>
 
+          <p className="mt-4 rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-center text-xs text-ink-muted">
+            {t("Preview: new accounts start empty. The orders, documents and questionnaires in this demo belong to fictional demo companies.")}
+          </p>
+
           {!invite && step === 1 && (
             <div role="radiogroup" aria-label={t("Account type")} className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-line bg-surface-2/70 p-1">
               {(["factory", "buyer"] as const).map((r) => {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { randomBytes } from "node:crypto";
 import { getSession, requireSession } from "@/lib/server/auth";
 import { draftAnswer } from "@/lib/server/questionnaire-ai";
 import { getCatalogState, saveAnswer, saveAskedQuestion, type CatalogState } from "@/lib/server/catalog-repo";
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You can't send new questions while an unlink is pending or after unlinking." }, { status: 409 });
     }
     if (text.length < 8 || text.length > 300) return NextResponse.json({ error: "Write a question of 8 to 300 characters." }, { status: 400 });
-    const added = { id: `${qn.id}-x${(state.asked[qn.id]?.length ?? 0) + 1}`, text, askedBy: session.name, askedAt: new Date().toISOString() };
+    const added = { id: `${qn.id}-x${randomBytes(4).toString("hex")}`, text, askedBy: session.name, askedAt: new Date().toISOString() };
     await saveAskedQuestion(qn.id, added);
     return NextResponse.json({ asked: added });
   }

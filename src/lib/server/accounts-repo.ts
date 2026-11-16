@@ -6,7 +6,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { KvAbort, kvRead, kvUpdate } from "./kv.ts";
 import { hashPassword, type UserRole } from "./session.ts";
-import { INVITE_TTL_MS, inviteState, settle, type Invite, type Link } from "../links.ts";
+import { INVITE_TTL_MS, inviteState, settle, type Invite, type Link, type LinkResult } from "../links.ts";
 import { orgName } from "../questionnaire.ts";
 
 export interface Org {
@@ -180,7 +180,21 @@ export async function linksForOrg(orgId: string, now = Date.now()): Promise<Link
   return (await getLinks(now)).filter((l) => l.factoryOrgId === orgId || l.buyerOrgId === orgId);
 }
 
-/** Saves one link, checking under the row lock that it still matches what the caller read. */
+/**
+ * Applies one step (unlink, cancel, agree) to the stored link inside the store's lock, so two
+ * people pressing buttons at the same moment can't overwrite each other.
+ */
+export async function applyLinkStep(linkId: string, step: (l: Link) => LinkResult): Promise<LinkResult> {
+  let result: LinkResult = { ok: false, error: "Unknown link." };
+  await kvUpdate<Record<string, Link>>(K.links, seedLinks, (all) => {
+    const current = all[linkId];
+    result = current ? step(settle(current)) : { ok: false, error: "Unknown link." };
+    if (result.ok) all[linkId] = result.link;
+  });
+  return result;
+}
+
+/** Saves one link (used when a new link is created). */
 export async function saveLink(link: Link): Promise<void> {
   await kvUpdate<Record<string, Link>>(K.links, seedLinks, (all) => {
     all[link.id] = link;

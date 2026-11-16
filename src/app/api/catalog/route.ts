@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession, requireSession } from "@/lib/server/auth";
-import { getCatalogState, resetStyle, saveCustomStyle, saveRenewal } from "@/lib/server/catalog-repo";
+import { getCatalogState, resetStyle, saveCustomStyle } from "@/lib/server/catalog-repo";
 import { STYLES_CATALOG, getStyleData, normalizeStyleCode, type StyleData, type TierId, type TierRenewal } from "@/lib/styles";
 import { canSeeStyle, isLiveWith, scopeFor, styleParties } from "@/lib/server/access";
+import { FIXTURE_DOCS_ORG } from "@/lib/server/accounts-repo";
 import { partnerOf, type Link } from "@/lib/links";
 
 export const runtime = "nodejs";
@@ -52,7 +53,14 @@ export async function POST(req: NextRequest) {
     // The order is always this factory's, and its buyer must be a company this factory is linked to.
     const buyerOrgId = typeof s.buyerOrgId === "string" ? s.buyerOrgId : undefined;
     if (buyerOrgId && !isLiveWith(scope, buyerOrgId)) return bad("Link with this buyer first.");
-    const tiers = s.tiers.map((t) => (t.tierNumber === 0 ? { ...t, facilityName: scope.orgNameOf(scope.orgId).replace(/\s*\(.*\)\s*$/, "") } : t));
+    const demoFactory = scope.orgId === FIXTURE_DOCS_ORG;
+    const tiers = s.tiers.map((t) =>
+      t.tierNumber === 0
+        ? { ...t, facilityName: scope.orgNameOf(scope.orgId).replace(/\s*\(.*\)\s*$/, "") }
+        : demoFactory
+          ? t
+          : { ...t, facilityName: `${t.facilityName} (example supplier, replace)` }
+    );
     await saveCustomStyle({
       ...s,
       code,
@@ -75,11 +83,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.action === "renewal") {
-    const r = body.renewal;
-    if (!style.tiers.some((t) => t.id === body.tierId)) return bad("Unknown supplier tier.");
-    if (!r || typeof r.certNumber !== "string" || typeof r.documentSha256 !== "string") return bad("Invalid renewal.");
-    await saveRenewal(code, body.tierId, r);
-    return NextResponse.json({ ok: true });
+    // Renewals are saved only by /api/ingest after the certificate itself has been checked.
+    return NextResponse.json({ error: "Upload the certificate to renew it." }, { status: 410 });
   }
 
   return bad("Unknown action.");

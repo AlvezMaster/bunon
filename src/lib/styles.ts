@@ -379,16 +379,20 @@ export function getStyleData(
   return applyRenewals(base, renewals[normalized]);
 }
 
+/** A certificate counts as expired once its valid-through date has passed, whatever status was stored. */
+export function tierStatusOn(tier: Pick<SupplyChainTier, "status" | "validThrough">, today: string = new Date().toISOString().slice(0, 10)): TierStatus {
+  return tier.status === "expired" || (!!tier.validThrough && tier.validThrough < today) ? "expired" : "verified";
+}
+
 export function applyRenewals(style: StyleData, renewals?: Partial<Record<TierId, TierRenewal>>): StyleData {
-  if (!renewals || Object.keys(renewals).length === 0) return style;
-  return {
-    ...style,
-    tiers: style.tiers.map((tier) => {
-      const r = renewals[tier.id];
-      if (!r) return tier;
-      return { ...tier, certNumber: r.certNumber, certType: r.certType, validThrough: r.validThrough, status: "verified" };
-    }),
-  };
+  const today = new Date().toISOString().slice(0, 10);
+  const tiers = style.tiers.map((tier) => {
+    const r = renewals?.[tier.id];
+    const next: SupplyChainTier = r ? { ...tier, certNumber: r.certNumber, certType: r.certType, validThrough: r.validThrough, status: "verified" } : tier;
+    const status = tierStatusOn(next, today);
+    return status === next.status ? next : { ...next, status };
+  });
+  return tiers.every((t, i) => t === style.tiers[i]) ? style : { ...style, tiers };
 }
 
 export function listStyles(customCatalog: Record<string, StyleData> = {}, renewals: RenewalMap = {}): StyleData[] {
@@ -429,7 +433,7 @@ export function visibleOrders(styles: StyleData[], user: { role: string; organiz
 }
 
 export function styleClearance(style: StyleData): ClearanceSummary {
-  const expiredTiers = style.tiers.filter((t) => t.status === "expired");
+  const expiredTiers = style.tiers.filter((t) => tierStatusOn(t) === "expired");
   return {
     cleared: expiredTiers.length === 0,
     expiredTiers,
