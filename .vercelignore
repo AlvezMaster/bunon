@@ -1,8 +1,10 @@
-# never upload local secrets or bulky research material
+# Never upload local secrets or bulky research material.
+# Leading "/" = only the folder at the project root. Without it, "reports" also matched
+# src/app/reports, so the Reports page was left out of every Vercel build.
 .env
 .env*.local
-research_notes
-reports
-CLOUDCAMP_BD_CONTEXT.md
-.agents
-tests
+/research_notes
+/reports
+/CLOUDCAMP_BD_CONTEXT.md
+/.agents
+/tests
