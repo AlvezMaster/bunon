@@ -6,7 +6,8 @@ import { LangRoot } from "@/components/Preferences";
 
 // Dark is the default (set on <html> below). This runs before first paint and only switches to light
 // for visitors who chose it, so nobody sees a flash (key shared with Preferences.tsx).
-const THEME_INIT = `try{if(localStorage.getItem("bunon-theme")==="light")delete document.documentElement.dataset.theme}catch(e){}`;
+// Light is the default for first-time visitors; dark only when the visitor chose it before.
+const THEME_INIT = `try{if(localStorage.getItem("bunon-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "Bunon · Answer every buyer once",
@@ -15,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A0E1A",
-  colorScheme: "dark light",
+  themeColor: "#F7F5F0",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
