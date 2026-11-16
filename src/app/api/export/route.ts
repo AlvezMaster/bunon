@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/server/auth";
-import { linkWith, scopeFor, styleParties } from "@/lib/server/access";
+import { linkWith, questionnaireParties, scopeFor, styleParties } from "@/lib/server/access";
 import { FIXTURE_DOCS_ORG } from "@/lib/server/accounts-repo";
 import { getCatalogState } from "@/lib/server/catalog-repo";
 import { getBlockParties } from "@/lib/server/ledger-parties";
@@ -8,7 +8,8 @@ import { listLedger } from "@/lib/server/ledger-repo";
 import { zip } from "@/lib/server/zip";
 import { partnerOf } from "@/lib/links";
 import { listStyles } from "@/lib/styles";
-import { QUESTIONNAIRES, orgName } from "@/lib/questionnaire";
+import { orgName } from "@/lib/questionnaire";
+import { allQuestionnaires } from "@/lib/server/questionnaires-repo";
 import { FACTORY_DOCUMENTS } from "@/lib/fixtures/factory-documents";
 
 export const runtime = "nodejs";
@@ -39,7 +40,10 @@ export async function GET(req: NextRequest) {
     const p = styleParties(scope, s);
     return pair(p.factory, p.buyer);
   });
-  const questionnaires = QUESTIONNAIRES.filter((q) => pair(scope.idByName(q.factory), scope.idByName(q.buyer))).map((q) => ({
+  const questionnaires = (await allQuestionnaires()).filter((q) => {
+    const p = questionnaireParties(scope, q);
+    return pair(p.factory, p.buyer);
+  }).map((q) => ({
     id: q.id,
     title: q.title,
     buyer: q.buyer,

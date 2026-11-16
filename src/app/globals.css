@@ -877,3 +877,8 @@ html[data-theme="dark"] .tile-link[data-primary="true"] {
   .tile-link .tile-arrow { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
   .tile-link:hover .tile-arrow { transform: translateX(3px); }
 }
+
+/* A row that can't be opened (nothing to show yet) doesn't light up. */
+.row-link:disabled::before { opacity: 0 !important; }
+.row-link:disabled { cursor: default; }
+label.tile-link:has(input:focus-visible) { outline: 2px solid var(--color-brand); outline-offset: 3px; }

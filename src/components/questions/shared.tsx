@@ -25,12 +25,17 @@ export interface Approved {
 }
 export interface Question {
   id: string;
+  /** Same for this question in every factory's copy of the questionnaire. */
+  ref: string;
   text: string;
   /** Set when the buyer added the question after sending the questionnaire. */
   added: string | null;
 }
 export interface Questionnaire {
   id: string;
+  /** Copies of one questionnaire sent to several factories share this. */
+  groupId: string;
+  factoryOrgId?: string | null;
   buyer: string;
   factory: string;
   title: string;
@@ -43,6 +48,8 @@ export interface Questionnaire {
 export interface Payload {
   role: "factory" | "buyer";
   questionnaires: Questionnaire[];
+  /** Buyer only: factories that can receive a new questionnaire now. */
+  factories?: Array<{ id: string; name: string }>;
   documents: Doc[];
   answers: Record<string, Approved>;
   model: string | null;
@@ -72,6 +79,28 @@ export function useQuestionnaires() {
 export function useDay() {
   const lang = useBunonStore((s) => s.lang);
   return (iso: string) => new Date(iso).toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", { day: "numeric", month: "short" });
+}
+
+/** One questionnaire as the buyer sees it: the same questions, sent to one or more factories. */
+export interface QuestionGroup {
+  groupId: string;
+  title: string;
+  sentOn: string;
+  dueOn: string;
+  copies: Questionnaire[];
+  /** Every question once, in order, by its shared ref. */
+  rows: Array<{ ref: string; text: string; added: string | null }>;
+}
+
+export function groupQuestionnaires(list: Questionnaire[]): QuestionGroup[] {
+  const groups = new Map<string, QuestionGroup>();
+  for (const q of list) {
+    const g = groups.get(q.groupId) ?? { groupId: q.groupId, title: q.title, sentOn: q.sentOn, dueOn: q.dueOn, copies: [], rows: [] };
+    g.copies.push(q);
+    for (const x of q.questions) if (!g.rows.some((r) => r.ref === x.ref)) g.rows.push({ ref: x.ref, text: x.text, added: x.added });
+    groups.set(q.groupId, g);
+  }
+  return [...groups.values()].sort((a, b) => b.sentOn.localeCompare(a.sentOn));
 }
 
 export function answeredCount(q: Questionnaire, answers: Record<string, Approved>) {

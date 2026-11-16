@@ -23,6 +23,8 @@ export interface ApprovedAnswer {
 export interface AskedQuestion {
   id: string;
   text: string;
+  /** Shared by the same question in every factory's copy. */
+  ref?: string;
   askedBy: string;
   askedAt: string;
 }

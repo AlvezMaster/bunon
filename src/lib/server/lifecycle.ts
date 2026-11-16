@@ -8,7 +8,7 @@ import { appendLedgerBlock } from "./ledger-repo.ts";
 import { recordBlockParties } from "./ledger-parties.ts";
 import { deleteSharedAnswers, getCatalogState } from "./catalog-repo.ts";
 import { isReadable, settle, type Link } from "../links.ts";
-import { QUESTIONNAIRES } from "../questionnaire.ts";
+import { allQuestionnaires, deleteQuestionnaires } from "./questionnaires-repo.ts";
 import { canonicalJson, sha256Hex } from "../crypto.ts";
 
 export type LinkEvent = "LINK CREATED" | "UNLINK REQUESTED" | "UNLINK CANCELLED" | "UNLINKED" | "SHARED DATA DELETED";
@@ -56,9 +56,12 @@ export async function runLinkJobs(now = Date.now()): Promise<number> {
       (l) => l.id !== after.id && l.factoryOrgId === after.factoryOrgId && l.buyerOrgId === after.buyerOrgId && isReadable(settle(l, now))
     );
     if (after.status === "purged" && !newer) {
-      const pair = QUESTIONNAIRES.filter((q) => idx.idByName(q.factory) === after.factoryOrgId && idx.idByName(q.buyer) === after.buyerOrgId);
+      const pair = (await allQuestionnaires()).filter(
+        (q) => (q.factoryOrgId ?? idx.idByName(q.factory)) === after.factoryOrgId && (q.buyerOrgId ?? idx.idByName(q.buyer)) === after.buyerOrgId
+      );
       const questionIds = pair.flatMap((q) => [...q.questions.map((x) => x.id), ...(state.asked[q.id] ?? []).map((x) => x.id)]);
       await deleteSharedAnswers(questionIds, pair.map((q) => q.id));
+      await deleteQuestionnaires(pair.filter((q) => q.factoryOrgId).map((q) => q.id));
       await logLinkEvent("SHARED DATA DELETED", after, "Bunon (scheduled deletion)");
     }
   }

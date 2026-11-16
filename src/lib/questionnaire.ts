@@ -14,6 +14,8 @@ export type DraftStatus = "draft" | "needs_person" | "unverified";
 export interface BuyerQuestion {
   id: string;
   text: string;
+  /** Same value for the same question in every factory's copy of a questionnaire (defaults to id). */
+  ref?: string;
   /** Labels used only by the accuracy test (scripts/eval-questionnaire.ts). */
   expected: { category: QuestionCategory; answer?: AnswerKind; docId?: string };
 }
@@ -39,9 +41,13 @@ export const BUYER_QUESTIONNAIRE = {
   ] satisfies BuyerQuestion[],
 };
 
-/** One questionnaire a buyer sent to one factory. */
+/**
+ * One factory's copy of a buyer's questionnaire. A buyer who sends the same questionnaire to several
+ * factories creates one copy per factory; they share `groupId`, and matching questions share `ref`.
+ */
 export interface QuestionnaireRequest {
   id: string;
+  groupId: string;
   buyer: string;
   factory: string;
   title: string;
@@ -56,6 +62,7 @@ const NODIWEAR = "Nodiwear Apparel Ltd. (fictional factory)";
 export const QUESTIONNAIRES: QuestionnaireRequest[] = [
   {
     id: "nordlys-2026",
+    groupId: "nordlys-2026",
     buyer: BUYER_QUESTIONNAIRE.buyer,
     factory: NODIWEAR,
     title: BUYER_QUESTIONNAIRE.title,
@@ -64,7 +71,19 @@ export const QUESTIONNAIRES: QuestionnaireRequest[] = [
     questions: BUYER_QUESTIONNAIRE.questions,
   },
   {
+    // The same questionnaire, sent by the same buyer to its second factory.
+    id: "nordlys-2026-kanthaloom",
+    groupId: "nordlys-2026",
+    buyer: BUYER_QUESTIONNAIRE.buyer,
+    factory: "Kanthaloom Knitwear Ltd. (fictional factory)",
+    title: BUYER_QUESTIONNAIRE.title,
+    sentOn: "2026-11-02",
+    dueOn: "2026-11-30",
+    questions: BUYER_QUESTIONNAIRE.questions.map((q) => ({ ...q, id: `nordlys-2026-k-${q.id}`, ref: q.id })),
+  },
+  {
     id: "vela-2026",
+    groupId: "vela-2026",
     buyer: "Vela Outfitters GmbH (fictional EU brand)",
     factory: NODIWEAR,
     title: "Worker safety check",

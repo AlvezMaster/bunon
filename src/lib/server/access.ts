@@ -56,12 +56,14 @@ export function canSeeStyle(scope: Scope, s: StyleData): boolean {
   return p.buyer === scope.orgId && canReadWith(scope, p.factory);
 }
 
-/** Parties of a questionnaire, which names its buyer and factory. */
-export function questionnaireParties(scope: Scope, q: { buyer: string; factory: string }) {
-  return { factory: scope.idByName(q.factory), buyer: scope.idByName(q.buyer) };
+type QuestionnaireLike = { buyer: string; factory: string; buyerOrgId?: string; factoryOrgId?: string };
+
+/** Parties of a questionnaire: stored company ids for ones made in the app, names for the demo ones. */
+export function questionnaireParties(scope: Scope, q: QuestionnaireLike) {
+  return { factory: q.factoryOrgId ?? scope.idByName(q.factory), buyer: q.buyerOrgId ?? scope.idByName(q.buyer) };
 }
 
-export function canSeeQuestionnaire(scope: Scope, q: { buyer: string; factory: string }): boolean {
+export function canSeeQuestionnaire(scope: Scope, q: QuestionnaireLike): boolean {
   const p = questionnaireParties(scope, q);
   const me = scope.role === "factory" ? p.factory : p.buyer;
   const other = scope.role === "factory" ? p.buyer : p.factory;
