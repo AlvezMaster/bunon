@@ -38,6 +38,7 @@ export async function logLinkEvent(type: LinkEvent, link: Link, actor: string): 
 export async function runLinkJobs(now = Date.now()): Promise<number> {
   const changed: Array<{ before: Link; after: Link }> = [];
   await kvUpdate<Record<string, Link>>(LINKS_KEY, seedLinks, (all) => {
+    changed.length = 0; // this callback can run again if another request wrote first
     for (const [id, link] of Object.entries(all)) {
       const after = settle(link, now);
       if (after.status !== link.status) {

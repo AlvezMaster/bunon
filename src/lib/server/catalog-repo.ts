@@ -1,12 +1,11 @@
 /**
- * Shared order state: certificate renewals and factory-created orders.
+ * Shared order state: certificate renewals, factory-created orders, sent answers and buyer-added questions.
  *
- * This used to live only in each browser's localStorage, so a factory's fix never reached a buyer
- * on another device. It now lives on the server (PostgreSQL when reachable, otherwise server memory,
- * the same rule as the ledger) and every signed-in user loads it from /api/catalog.
+ * It lives on the server in the key/value store (kv.ts: PostgreSQL, Cloudflare D1 or memory), so a
+ * factory's change reaches its buyers on any device. API routes filter it per company (access.ts).
  */
 import type { RenewalMap, StyleData, TierId, TierRenewal } from "../styles.ts";
-import { getDataSourceKind, getPool, invalidateDataSource } from "./data-source.ts";
+import { kvReadMany, kvUpdate } from "./kv.ts";
 
 /** A questionnaire answer a factory person approved; also sealed in the ledger. */
 export interface ApprovedAnswer {
@@ -36,124 +35,57 @@ export interface CatalogState {
   asked: Record<string, AskedQuestion[]>;
 }
 
-const empty = (): CatalogState => ({ renewals: {}, customStyles: {}, answers: {}, asked: {} });
+const KEYS = { renewals: "catalog:renewals", customStyles: "catalog:customStyles", answers: "catalog:answers", asked: "catalog:asked" } as const;
+const obj = <T>() => () => ({}) as T;
 
-// Memory store survives dev hot reloads by living on globalThis.
-const g = globalThis as { __bunonCatalog?: CatalogState };
-const memory = (): CatalogState => {
-  g.__bunonCatalog ??= empty();
-  g.__bunonCatalog.answers ??= {};
-  g.__bunonCatalog.asked ??= {};
-  return g.__bunonCatalog;
-};
-
-let tableReady = false;
-async function pgEnsureTable(): Promise<void> {
-  if (tableReady) return;
-  await getPool().query(
-    `CREATE TABLE IF NOT EXISTS bunon_catalog_state (
-       key TEXT PRIMARY KEY,
-       value JSONB NOT NULL,
-       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-     )`
-  );
-  tableReady = true;
-}
-
-async function pgRead(): Promise<CatalogState> {
-  await pgEnsureTable();
-  const { rows } = await getPool().query<{ key: string; value: unknown }>(
-    "SELECT key, value FROM bunon_catalog_state WHERE key IN ('renewals', 'customStyles', 'answers', 'asked')"
-  );
-  const state = empty();
-  for (const r of rows) {
-    if (r.key === "renewals") state.renewals = r.value as RenewalMap;
-    if (r.key === "customStyles") state.customStyles = r.value as Record<string, StyleData>;
-    if (r.key === "answers") state.answers = r.value as Record<string, ApprovedAnswer>;
-    if (r.key === "asked") state.asked = r.value as Record<string, AskedQuestion[]>;
-  }
-  return state;
-}
-
-async function pgWrite(key: keyof CatalogState, value: unknown): Promise<void> {
-  await pgEnsureTable();
-  await getPool().query(
-    `INSERT INTO bunon_catalog_state (key, value, updated_at) VALUES ($1, $2, now())
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-    [key, JSON.stringify(value)]
-  );
-}
-
-/** Runs against Postgres when available; on a Postgres error falls back to memory for this call. */
-async function withStore<T>(pg: () => Promise<T>, mem: () => T): Promise<T> {
-  if ((await getDataSourceKind()) === "postgres") {
-    try {
-      return await pg();
-    } catch (error) {
-      console.warn("[bunon/catalog] Postgres unavailable, using memory:", (error as Error).message);
-      invalidateDataSource();
-    }
-  }
-  return mem();
-}
-
-export function getCatalogState(): Promise<CatalogState> {
-  return withStore(pgRead, () => structuredClone(memory()));
+export async function getCatalogState(): Promise<CatalogState> {
+  const v = await kvReadMany(Object.values(KEYS));
+  return {
+    renewals: (v[KEYS.renewals] as RenewalMap) ?? {},
+    customStyles: (v[KEYS.customStyles] as Record<string, StyleData>) ?? {},
+    answers: (v[KEYS.answers] as Record<string, ApprovedAnswer>) ?? {},
+    asked: (v[KEYS.asked] as Record<string, AskedQuestion[]>) ?? {},
+  };
 }
 
 export async function saveRenewal(styleCode: string, tierId: TierId, renewal: TierRenewal): Promise<void> {
-  const apply = (s: CatalogState) => {
-    s.renewals[styleCode] = { ...(s.renewals[styleCode] ?? {}), [tierId]: renewal };
-    return s.renewals;
-  };
-  await withStore(async () => pgWrite("renewals", apply(await pgRead())), () => void apply(memory()));
+  await kvUpdate<RenewalMap>(KEYS.renewals, obj<RenewalMap>(), (all) => {
+    all[styleCode] = { ...(all[styleCode] ?? {}), [tierId]: renewal };
+  });
 }
 
 export async function resetStyle(styleCode: string): Promise<void> {
-  const apply = (s: CatalogState) => {
-    delete s.renewals[styleCode];
-    return s.renewals;
-  };
-  await withStore(async () => pgWrite("renewals", apply(await pgRead())), () => void apply(memory()));
+  await kvUpdate<RenewalMap>(KEYS.renewals, obj<RenewalMap>(), (all) => {
+    delete all[styleCode];
+  });
 }
 
 export async function saveCustomStyle(style: StyleData): Promise<void> {
-  const apply = (s: CatalogState) => {
-    s.customStyles[style.code] = style;
-    return s.customStyles;
-  };
-  await withStore(async () => pgWrite("customStyles", apply(await pgRead())), () => void apply(memory()));
+  await kvUpdate<Record<string, StyleData>>(KEYS.customStyles, obj<Record<string, StyleData>>(), (all) => {
+    all[style.code] = style;
+  });
 }
 
 export async function saveAnswer(answer: ApprovedAnswer): Promise<void> {
-  const apply = (s: CatalogState) => {
-    s.answers[answer.questionId] = answer;
-    return s.answers;
-  };
-  await withStore(async () => pgWrite("answers", apply(await pgRead())), () => void apply(memory()));
+  await kvUpdate<Record<string, ApprovedAnswer>>(KEYS.answers, obj<Record<string, ApprovedAnswer>>(), (all) => {
+    all[answer.questionId] = answer;
+  });
 }
 
 export async function saveAskedQuestion(questionnaireId: string, question: AskedQuestion): Promise<void> {
-  const apply = (s: CatalogState) => {
-    s.asked[questionnaireId] = [...(s.asked[questionnaireId] ?? []), question];
-    return s.asked;
-  };
-  await withStore(async () => pgWrite("asked", apply(await pgRead())), () => void apply(memory()));
+  await kvUpdate<Record<string, AskedQuestion[]>>(KEYS.asked, obj<Record<string, AskedQuestion[]>>(), (all) => {
+    const list = all[questionnaireId] ?? [];
+    // Retried updates on D1 must not add the same question twice.
+    if (!list.some((q) => q.id === question.id)) all[questionnaireId] = [...list, question];
+  });
 }
 
 /** Deletes shared answers and buyer-added questions (used when a link's export window ends). */
 export async function deleteSharedAnswers(questionIds: string[], questionnaireIds: string[]): Promise<void> {
-  const drop = (s: CatalogState) => {
-    for (const id of questionIds) delete s.answers[id];
-    for (const id of questionnaireIds) delete s.asked[id];
-  };
-  await withStore(
-    async () => {
-      const s = await pgRead();
-      drop(s);
-      await pgWrite("answers", s.answers);
-      await pgWrite("asked", s.asked);
-    },
-    () => void drop(memory())
-  );
+  await kvUpdate<Record<string, ApprovedAnswer>>(KEYS.answers, obj<Record<string, ApprovedAnswer>>(), (all) => {
+    for (const id of questionIds) delete all[id];
+  });
+  await kvUpdate<Record<string, AskedQuestion[]>>(KEYS.asked, obj<Record<string, AskedQuestion[]>>(), (all) => {
+    for (const id of questionnaireIds) delete all[id];
+  });
 }

@@ -147,10 +147,12 @@ export async function createAccount(a: NewAccount): Promise<{ user: StoredUser; 
     created_at: now,
   };
   await kvUpdate<Org[]>(K.orgs, none([]), (list) => {
+    if (list.some((o) => o.id === org.id)) return;
     if (list.some((o) => norm(o.name) === norm(org.name))) throw new KvAbort("ORG_TAKEN");
     list.push(org);
   });
   await kvUpdate<StoredUser[]>(K.users, none([]), (list) => {
+    if (list.some((u) => u.id === user.id)) return;
     if (list.some((u) => u.email === user.email)) throw new KvAbort("EMAIL_TAKEN");
     list.push(user);
   });
@@ -203,7 +205,7 @@ export async function createInvite(factoryOrgId: string, createdBy: string, note
     expiresAt: new Date(now + INVITE_TTL_MS).toISOString(),
   };
   await kvUpdate<Invite[]>(K.invites, none([]), (list) => {
-    list.push(invite);
+    if (!list.some((i) => i.id === invite.id)) list.push(invite);
   });
   return { token, invite };
 }
@@ -221,6 +223,7 @@ export async function findInvite(token: string): Promise<Invite | null> {
 export async function revokeInvite(factoryOrgId: string, id: string): Promise<boolean> {
   let done = false;
   await kvUpdate<Invite[]>(K.invites, none([]), (list) => {
+    done = false;
     const inv = list.find((i) => i.id === id && i.factoryOrgId === factoryOrgId);
     if (inv && inviteState(inv) === "open") {
       inv.revokedAt = new Date().toISOString();
@@ -239,6 +242,7 @@ export async function acceptInvite(token: string, buyerOrgId: string): Promise<A
   let failure: string | null = null;
   let factoryOrgId = "";
   await kvUpdate<Invite[]>(K.invites, none([]), (list) => {
+    failure = null;
     const inv = list.find((i) => i.tokenHash === h);
     const state = inv ? inviteState(inv, now) : null;
     if (!inv || state !== "open") {

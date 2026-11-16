@@ -6,11 +6,13 @@
  *
  * Env:
  *   DATABASE_URL        postgresql://user:pass@host:5432/db  (default local bunon_db)
- *   BUNON_DATA_SOURCE   auto | postgres | memory              (default auto)
+ *   BUNON_DATA_SOURCE   auto | postgres | memory | d1         (default auto)
+ *   D1_*                Cloudflare D1 over HTTP; see d1.ts
  */
 import { Pool } from "pg";
+import { d1Configured } from "./d1.ts";
 
-export type DataSourceKind = "postgres" | "memory";
+export type DataSourceKind = "postgres" | "memory" | "d1";
 
 export interface DataSourceStatus {
   kind: DataSourceKind;
@@ -52,7 +54,7 @@ export function getPool(): Pool {
 
 function configuredKind(): DataSourceKind | "auto" {
   const v = (process.env.BUNON_DATA_SOURCE || "auto").toLowerCase();
-  return v === "postgres" || v === "memory" ? v : "auto";
+  return v === "postgres" || v === "memory" || v === "d1" ? v : "auto";
 }
 
 async function probePostgres(): Promise<DataSourceStatus["postgres"]> {
@@ -78,6 +80,14 @@ export async function getDataSourceStatus(force = false): Promise<DataSourceStat
 
   const configured = configuredKind();
   let postgres: DataSourceStatus["postgres"] = { reachable: false, latencyMs: null, error: "not probed (memory forced)", host: hostFromUrl(connectionString()) };
+  if (configured === "d1") {
+    // D1 is used whenever its settings are present; without them the app falls back to memory and says so.
+    const ok = d1Configured();
+    if (!ok) console.warn("[bunon/db] BUNON_DATA_SOURCE=d1 but D1_* settings are missing; using memory.");
+    const status: DataSourceStatus = { kind: ok ? "d1" : "memory", configured, postgres: { ...postgres, error: "not used (D1 selected)" }, checkedAt: new Date(now).toISOString() };
+    lastProbe = { at: now, status };
+    return status;
+  }
   if (configured !== "memory") postgres = await probePostgres();
 
   const kind: DataSourceKind = configured === "memory" ? "memory" : configured === "postgres" ? "postgres" : postgres.reachable ? "postgres" : "memory";
