@@ -1,103 +1,804 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@500;600&display=swap');
 @import "tailwindcss";
 
+/* `dark:` utilities follow the site theme switch (html[data-theme="dark"]), not the OS setting */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* =============================================================================
+   BUNON PALETTE: paper and ink (60-30-10)
+   60% canvas    porcelain neutrals tinted toward indigo (never dead grey)
+   30% structure deep indigo ink: text, the header, dark bands, the brand colour
+   10% accent    rani pink, the magenta of Bengali saris: primary actions only
+   Status colours (success / warning / danger) always come with an icon and a label.
+   Hex values are the source; OKLCH equivalents are noted for perceptual tuning.
+   ============================================================================= */
+@theme {
+  --color-canvas: #F7F5F0;
+  --color-surface: #FFFDF8;
+  --color-surface-2: #EFECE4;
+  --color-line: #D8D3C8;
+  --color-line-strong: #BFB8A9;
+  --color-field: #8C8678;
+
+  --color-ink: #14171A;
+  --color-ink-muted: #4A4F55;
+  --color-ink-faint: #5F6368;
+
+  --color-brand: #1E3A5F;
+  --color-brand-soft: #E4EAF1;
+
+  --color-accent: #C2410C;
+  --color-accent-hover: #9A3412;
+  --color-accent-soft: #FBEADF;
+
+  --color-success: #0F7A4F;
+  --color-success-soft: #E3F1EA;
+  --color-warning: #8A6400;
+  --color-warning-soft: #F8EFD2;
+  --color-danger: #B42318;
+  --color-danger-soft: #FBE9E6;
+
+  --font-display: "Newsreader", "Noto Serif Bengali", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans Bengali", ui-monospace, monospace;
+  --font-bengali: "Noto Sans Bengali", "Plus Jakarta Sans", sans-serif;
+}
+
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, Monaco, monospace;
+  color-scheme: light;
+
+  /* Legacy names still referenced by components */
+  --bg-canvas: var(--color-canvas);
+  --bg-surface: var(--color-surface);
+  --bg-elevated: var(--color-surface-2);
+  --border-hairline: var(--color-line);
+  --border-strong: var(--color-line-strong);
+  --border-focus: var(--color-brand);
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-muted);
+  --text-muted: var(--color-ink-faint);
+
+  --radius-tiny: 4px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Two-layer lighting: tight contact shadow + soft indigo-tinted diffuse shadow */
+  --shadow-card: 0 1px 0 rgba(20, 23, 26, 0.04);
+  --shadow-raised: 0 18px 40px -24px rgba(20, 23, 26, 0.45);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  background-color: var(--color-canvas);
+}
+
 body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-sans);
-  background-color: #090c15;
-  color: #f1f5f9;
+  line-height: 1.55;
   min-height: 100vh;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  position: relative;
 }
 
-/* Emil Kowalski Button & Pressable Feedback */
-button, .pressable {
-  touch-action: manipulation;
-  transition: transform 140ms var(--ease-out), background-color 140ms var(--ease-out), border-color 140ms var(--ease-out), opacity 140ms var(--ease-out);
+::selection {
+  background-color: var(--color-brand);
+  color: #ffffff;
 }
 
-button:active, .pressable:active {
-  transform: scale(0.97);
+/* Paper grain: a 3% noise layer so the canvas reads as stock, not a flat screen */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Glass Surface Utilities */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+h1, h2, h3 {
+  text-wrap: balance;
 }
 
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Typography */
+.display-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.5vw + 1.25rem, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw + 1rem, 4rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.section-index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.mono-spec {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.font-bengali {
+  font-family: var(--font-bengali);
+}
+
+/* Surfaces (class names kept from the earlier theme so components need no rename) */
 .glass-card {
-  background: rgba(30, 41, 59, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-tiny);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-card-interactive {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-tiny);
+  box-shadow: var(--shadow-card);
+  transition: transform 200ms var(--ease-out), border-color 150ms ease, box-shadow 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glass-card-interactive:hover {
+    border-color: var(--color-ink);
+  }
+}
+
+.glass-terracotta {
+  background: var(--color-danger-soft);
+  border: 1px solid rgba(180, 35, 24, 0.3);
+  border-radius: var(--radius-tiny);
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 6px;
+  border: 1px solid var(--color-line);
 }
 
-/* Typography optical tracking */
-.tracking-tight-display {
-  letter-spacing: -0.028em;
+.hairline-frame {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-tiny);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+.hairline-frame-interactive {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-tiny);
+  transition: border-color 150ms var(--ease-out), background-color 150ms ease;
 }
 
-/* Pulse animation for live nodes */
-@keyframes pulse-glow {
-  0%, 100% {
+.hairline-frame-interactive:hover {
+  border-color: var(--color-line-strong);
+  background-color: var(--color-surface-2);
+}
+
+/* Buttons. Only .btn-primary-action uses the accent: one primary action per view. */
+.btn-primary-action,
+.btn-terracotta-action,
+.btn-primary-verified,
+.btn-secondary-action {
+  min-height: 48px;
+  padding: 0 24px;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: var(--radius-tiny);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  text-transform: none;
+  white-space: nowrap;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.btn-primary-action {
+  background-color: var(--color-accent);
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.btn-primary-action:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Urgent or destructive actions (chasing an expired certificate, flagging) */
+.btn-terracotta-action {
+  background-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn-terracotta-action:hover {
+  background-color: #931c13;
+}
+
+/* Confirming a verified result */
+.btn-primary-verified {
+  background-color: var(--color-success);
+  color: #ffffff;
+}
+
+.btn-primary-verified:hover {
+  background-color: #11632f;
+}
+
+/* Strong secondary: dark indigo fill */
+.btn-secondary-action {
+  background-color: var(--color-ink);
+  color: #ffffff;
+}
+
+.btn-secondary-action:hover {
+  background-color: var(--color-brand);
+}
+
+.btn-tactile-hollow {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border: 1px solid var(--color-line-strong);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: var(--radius-tiny);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease;
+}
+
+.btn-tactile-hollow:hover {
+  background-color: var(--color-surface-2);
+  border-color: var(--color-ink-faint);
+}
+
+.btn-primary-action:active,
+.btn-terracotta-action:active,
+.btn-primary-verified:active,
+.btn-secondary-action:active,
+.btn-tactile-hollow:active {
+  transform: scale(0.97);
+}
+
+.btn-primary-action:disabled,
+.btn-terracotta-action:disabled,
+.btn-primary-verified:disabled,
+.btn-secondary-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rounded-tiny {
+  border-radius: var(--radius-tiny);
+}
+
+/* Page-load reveal; the reduced-motion rule below makes it instant */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
     opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.08);
+    transform: none;
   }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.rise {
+  animation: rise 420ms var(--ease-out) both;
 }
 
-/* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-property: opacity, color, background-color, border-color !important;
     scroll-behavior: auto !important;
   }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body::after {
+    display: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* =============================================================================
+   DARK MODE: the same 60-30-10 roles, re-tuned for a deep indigo night canvas.
+   Set by <html data-theme="dark"> (an inline script restores it before first paint).
+   Text tokens get lighter; solid fills that carry white text keep their mid-tone
+   versions so white labels stay at 5.4:1 or better. All text pairs are 5.3:1 or better.
+   ============================================================================= */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0B1020;
+  --color-surface: #131A33;
+  --color-surface-2: #1B2342;
+  --color-line: #263056;
+  --color-line-strong: #354172;
+  --color-field: #6B77A0;
+  --color-ink: #E7EAF6;
+  --color-ink-muted: #AEB6D2;
+  --color-ink-faint: #8E98BA;
+  --color-brand: #A3B1FF;
+  --color-brand-soft: #1D2650;
+  --color-accent: #FF9A5C;
+  --color-accent-hover: #9A3412;
+  --color-accent-soft: #33200F;
+  --color-success: #5CD08B;
+  --color-success-soft: #10291C;
+  --color-warning: #F2AE59;
+  --color-warning-soft: #2E2010;
+  --color-danger: #FF8A80;
+  --color-danger-soft: #331716;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+}
+
+html[data-theme="dark"] body::after {
+  opacity: 0.05;
+}
+
+/* Solid fills behind white text */
+html[data-theme="dark"] .bg-ink { background-color: #1E2A5E; }
+html[data-theme="dark"] .bg-brand { background-color: #3446A8; }
+html[data-theme="dark"] .bg-accent,
+html[data-theme="dark"] .btn-primary-action { background-color: #C2410C; }
+html[data-theme="dark"] .btn-primary-action:hover { background-color: #9A3412; }
+html[data-theme="dark"] .bg-success,
+html[data-theme="dark"] .btn-primary-verified { background-color: #157A3B; }
+html[data-theme="dark"] .bg-danger,
+html[data-theme="dark"] .btn-terracotta-action { background-color: #B42318; }
+html[data-theme="dark"] .btn-secondary-action { background-color: #2A3A8F; }
+html[data-theme="dark"] .btn-secondary-action:hover { background-color: #3446A8; }
+html[data-theme="dark"] .glass-pill { background: rgba(19, 26, 51, 0.88); }
+html[data-theme="dark"] .glass-card,
+html[data-theme="dark"] .glass-card-interactive {
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+html[data-theme="dark"] ::selection { background-color: #3446A8; }
+
+
+/* =============================================================================
+   WATERCOLOUR BACKGROUNDS: one painting per theme on a fixed layer behind
+   everything. Page wrappers go transparent so it shows; cards become frosted
+   glass over it. WebP first, JPG fallback.
+   ============================================================================= */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--color-canvas);
+  background-image: url("/backgrounds/bunon-light.jpg");
+  background-image: radial-gradient(ellipse 60% 70% at 50% 45%, rgba(247, 245, 240, 0.55), transparent 75%), linear-gradient(rgba(247, 245, 240, 0.35), rgba(247, 245, 240, 0.35)), image-set(url("/backgrounds/bunon-light.webp") type("image/webp"), url("/backgrounds/bunon-light.jpg") type("image/jpeg"));
+  background-size: cover;
+  background-position: center;
+}
+
+html[data-theme="dark"] body::before {
+  background-color: #0A0E1A;
+  background-image: url("/backgrounds/bunon-dark.jpg");
+  background-image: radial-gradient(ellipse 60% 70% at 50% 45%, rgba(10, 14, 26, 0.5), transparent 75%), linear-gradient(rgba(10, 14, 26, 0.35), rgba(10, 14, 26, 0.35)), image-set(url("/backgrounds/bunon-dark.webp") type("image/webp"), url("/backgrounds/bunon-dark.jpg") type("image/jpeg"));
+}
+
+body,
+.min-h-screen.bg-canvas {
+  background-color: transparent;
+}
+
+.glass-card,
+.glass-card-interactive,
+.hairline-frame {
+  background-color: rgba(255, 253, 248, 0.78);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+html[data-theme="dark"] .glass-card,
+html[data-theme="dark"] .glass-card-interactive,
+html[data-theme="dark"] .hairline-frame {
+  background-color: rgba(19, 26, 51, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Full-width bands on the public page let the painting through too */
+section.bg-surface,
+footer.bg-surface {
+  background-color: rgba(255, 253, 248, 0.6);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+html[data-theme="dark"] section.bg-surface,
+html[data-theme="dark"] footer.bg-surface {
+  background-color: rgba(11, 16, 32, 0.55);
+}
+
+/* =============================================================================
+   TOUCH AND READING MINIMUMS
+   On touch screens every control is at least 44px tall; inside pages and dialogs
+   no text is smaller than 12px.
+   ============================================================================= */
+@media (pointer: coarse) {
+  header a,
+  header button,
+  main a.btn-primary-action,
+  main a.btn-tactile-hollow,
+  main button,
+  main select,
+  main input,
+  [role="dialog"] button,
+  [role="menu"] button {
+    min-height: 44px;
+  }
+}
+
+main :is(.text-\[10px\], .text-\[11px\]),
+[role="dialog"] :is(.text-\[10px\], .text-\[11px\]) {
+  font-size: 0.75rem;
+}
+
+/* =============================================================================
+   SCROLL-LINKED TYPOGRAPHY (CSS scroll-driven animations; no JavaScript)
+   Headings rise and sharpen as they enter; the hero drifts up as you leave it,
+   with its italic word sliding a little further than the rest. Browsers without
+   scroll timelines (and visitors who prefer reduced motion) see static text.
+   ============================================================================= */
+@keyframes scroll-reveal {
+  from {
+    opacity: 0.15;
+    transform: translateY(28px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes scroll-drift {
+  to {
+    transform: translateY(-56px);
+    opacity: 0.45;
+  }
+}
+
+@keyframes scroll-slide {
+  to {
+    transform: translateX(0.6em);
+  }
+}
+
+@keyframes scroll-track {
+  from {
+    letter-spacing: 0.02em;
+  }
+  to {
+    letter-spacing: -0.02em;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .scroll-reveal {
+      animation: scroll-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i, 0) * 6%) cover calc(28% + var(--i, 0) * 6%);
+    }
+
+    /* Section titles also tighten their letter-spacing as they settle */
+    h2.scroll-reveal {
+      animation: scroll-reveal linear both, scroll-track linear both;
+      animation-timeline: view(), view();
+      animation-range: entry 0% cover 30%, entry 0% cover 45%;
+    }
+
+    .scroll-drift {
+      animation: scroll-drift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 75vh;
+    }
+
+    .scroll-slide {
+      display: inline-block;
+      animation: scroll-slide linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 60vh;
+    }
+  }
+}
+
+/* "How it works" steps: each card rises into focus as it reaches the middle of the screen,
+   then dims and lifts away as the next one arrives. */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(72px) scale(0.94);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes step-out {
+  to {
+    opacity: 0.3;
+    transform: translateY(-28px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .step-card {
+      animation: step-in linear both, step-out linear both;
+      animation-timeline: view(), view();
+      animation-range: entry 5% cover 40%, exit 15% exit 85%;
+    }
+  }
+}
+
+/* Arrival after a MorphLink transition: the card settles in with a soft, elastic overshoot */
+@keyframes morph-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.morph-in {
+  animation: morph-in 560ms cubic-bezier(0.34, 1.4, 0.64, 1) 60ms both;
+}
+
+/* =============================================================================
+   ATMOSPHERE: drifting fog, live film grain, deeper glass, layered light.
+   Everything animates only transform/opacity on composited layers; visitors who
+   prefer reduced motion get the same look, held still.
+   ============================================================================= */
+
+/* --- Fog: three blurred light pools drifting slowly over the painting --- */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.atmosphere > span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.atmosphere > span:nth-child(1) {
+  width: 55vmax;
+  height: 55vmax;
+  left: -15vmax;
+  top: -20vmax;
+  background: radial-gradient(circle, rgba(42, 58, 143, 0.35), transparent 65%);
+  animation: fog-a 46s ease-in-out infinite alternate;
+}
+
+.atmosphere > span:nth-child(2) {
+  width: 45vmax;
+  height: 45vmax;
+  right: -12vmax;
+  top: 25vh;
+  background: radial-gradient(circle, rgba(194, 65, 12, 0.16), transparent 65%);
+  animation: fog-b 58s ease-in-out infinite alternate;
+}
+
+.atmosphere > span:nth-child(3) {
+  width: 60vmax;
+  height: 40vmax;
+  left: 20vw;
+  bottom: -22vmax;
+  background: radial-gradient(ellipse, rgba(120, 110, 180, 0.22), transparent 65%);
+  animation: fog-c 64s ease-in-out infinite alternate;
+}
+
+html[data-theme="dark"] .atmosphere > span {
+  opacity: 0.7;
+  mix-blend-mode: screen;
+}
+
+html[data-theme="dark"] .atmosphere > span:nth-child(1) {
+  background: radial-gradient(circle, rgba(99, 115, 230, 0.32), transparent 65%);
+}
+
+html[data-theme="dark"] .atmosphere > span:nth-child(2) {
+  background: radial-gradient(circle, rgba(255, 140, 80, 0.12), transparent 65%);
+}
+
+html[data-theme="dark"] .atmosphere > span:nth-child(3) {
+  background: radial-gradient(ellipse, rgba(150, 120, 230, 0.2), transparent 65%);
+}
+
+@keyframes fog-a {
+  to {
+    transform: translate3d(12vw, 8vh, 0) scale(1.15);
+  }
+}
+
+@keyframes fog-b {
+  to {
+    transform: translate3d(-14vw, -10vh, 0) scale(0.9);
+  }
+}
+
+@keyframes fog-c {
+  to {
+    transform: translate3d(-10vw, -6vh, 0) scale(1.1);
+  }
+}
+
+/* --- Film grain: the noise layer jitters a few times a second, like live static --- */
+body::after {
+  inset: -60%;
+  background-size: 180px 180px;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  will-change: transform;
+  animation: grain 0.9s steps(6) infinite;
+}
+
+html[data-theme="dark"] body::after {
+  opacity: 0.1;
+  mix-blend-mode: soft-light;
+}
+
+@keyframes grain {
+  0% { transform: translate3d(0, 0, 0); }
+  17% { transform: translate3d(-4%, 3%, 0); }
+  33% { transform: translate3d(3%, -5%, 0); }
+  50% { transform: translate3d(-6%, -2%, 0); }
+  67% { transform: translate3d(5%, 4%, 0); }
+  83% { transform: translate3d(-2%, 6%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* --- Deeper glass and layered light --- */
+:root {
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(20, 23, 26, 0.06), 0 12px 32px -16px rgba(20, 23, 26, 0.22);
+  --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 2px 4px rgba(20, 23, 26, 0.06), 0 28px 60px -24px rgba(20, 23, 26, 0.38);
+}
+
+html[data-theme="dark"] {
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 40px -18px rgba(0, 0, 0, 0.75);
+  --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 2px 6px rgba(0, 0, 0, 0.5), 0 36px 80px -28px rgba(0, 0, 0, 0.85);
+}
+
+.glass-card,
+.glass-card-interactive,
+.hairline-frame {
+  background-color: rgba(255, 253, 248, 0.66);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] .glass-card,
+html[data-theme="dark"] .glass-card-interactive,
+html[data-theme="dark"] .hairline-frame {
+  background-color: rgba(17, 23, 46, 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-card);
+}
+
+/* The one primary action carries a warm glow, brighter on hover */
+.btn-primary-action {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -2px 0 rgba(0, 0, 0, 0.18), 0 10px 28px -10px rgba(194, 65, 12, 0.6);
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 220ms ease;
+}
+
+.btn-primary-action:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.18), 0 14px 36px -10px rgba(194, 65, 12, 0.8);
+}
+
+/* --- Motion blur on arrivals: things come into focus as they move into place --- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes morph-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Logo gradient: deep indigo to blue on paper, lifted periwinkle on the night theme */
+:root {
+  --logo-from: #1C1B4D;
+  --logo-to: #2E57AE;
+}
+
+html[data-theme="dark"] {
+  --logo-from: #8B97F7;
+  --logo-to: #B9CCFF;
 }

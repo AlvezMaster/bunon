@@ -1,678 +1,511 @@
 "use client";
 
-import React, { useState } from "react";
+import { t } from "@/lib/i18n";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
+import Navbar from "@/components/Navbar";
+import DemoDataBadge from "@/components/DemoDataBadge";
+import ProductSwitcher from "@/components/ProductSwitcher";
+import { getStyleData, normalizeStyleCode, styleClearance, visibleOrders, DEFAULT_STYLE_CODE } from "@/lib/styles";
+import { useBunonStore } from "@/lib/store";
+import { useProvenanceTree } from "@/lib/use-provenance";
+import { shortHash } from "@/lib/crypto";
+import { formatIsoDate } from "@/lib/certificate-registry";
 import {
-  ShieldCheck,
-  CheckCircle2,
-  Copy,
+  AlertTriangle,
+  ArrowRight,
   Check,
-  Printer,
-  ArrowLeft,
-  ExternalLink,
-  Leaf,
-  Sparkles,
-  Factory,
-  Anchor,
-  Truck,
-  Droplets,
-  Scale,
-  QrCode,
-  FileText,
+  Copy,
+  Loader2,
   Lock,
-  Globe,
-  Share2,
-  Layers,
-  Award,
-  BadgeCheck,
-  Shirt,
-  Scissors,
-  Wrench,
-  Thermometer,
-  RotateCcw,
-  Hash,
-  Database
+  Printer,
+  QrCode,
+  SearchX,
+  ShieldCheck,
 } from "lucide-react";
 
+// --- store hydration (persisted state is restored right after mount by <StoreHydrator />) ---
+const subscribeHydration = (onChange: () => void) => useBunonStore.persist.onFinishHydration(() => onChange());
+const getHydrated = () => useBunonStore.persist.hasHydrated();
+const getServerHydrated = () => false;
+
+// --- window origin for the QR link (empty on the server and during hydration) ---
+const subscribeNoop = () => () => undefined;
+const getOrigin = () => window.location.origin;
+const getServerOrigin = () => "";
+
+function decodeStyleParam(raw: string | string[] | undefined): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return DEFAULT_STYLE_CODE;
+  try {
+    return normalizeStyleCode(decodeURIComponent(value)) || DEFAULT_STYLE_CODE;
+  } catch {
+    return normalizeStyleCode(value) || DEFAULT_STYLE_CODE;
+  }
+}
+
+function PageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans pb-24">
+      <div className="no-print">
+        <Navbar />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function DigitalProductPassportPage() {
-  const params = useParams();
-  const rawStyleCode = params?.styleCode as string | undefined;
-  const styleCode = rawStyleCode ? decodeURIComponent(rawStyleCode).toUpperCase() : "DN-2026";
+  const params = useParams<{ styleCode: string }>();
+  const styleCode = decodeStyleParam(params?.styleCode);
 
-  const [activeTab, setActiveTab] = useState<"materials" | "durability" | "traceability">("materials");
-  const [copiedHash, setCopiedHash] = useState(false);
-  const [selectedProofIndex, setSelectedProofIndex] = useState<number | null>(null);
+  const hydrated = useSyncExternalStore(subscribeHydration, getHydrated, getServerHydrated);
+  const origin = useSyncExternalStore(subscribeNoop, getOrigin, getServerOrigin);
+  const customStyles = useBunonStore((s) => s.customStyles);
+  const renewals = useBunonStore((s) => s.renewals);
 
-  const merkleRoot = "0x7f4b82a10c9e21df904321bcde45aa81938b";
+  // Custom orders and renewals live in the persisted store, so resolve only once it has hydrated.
+  const session = useBunonStore((s) => s.session);
+  const visibleCodes = useBunonStore((s) => s.visibleCodes);
+  const setActiveSupplierStyleId = useBunonStore((s) => s.setActiveSupplierStyleId);
+  const found = hydrated ? getStyleData(styleCode, customStyles, renewals) : null;
+  // Factories only see their own products; buyers see every supplier's.
+  const style = found ? (visibleOrders([found], session, visibleCodes)[0] ?? null) : null;
+  const liveTree = useProvenanceTree(style);
+  const tree = liveTree && style && liveTree.styleCode === style.code ? liveTree : null;
 
-  const handleCopyHash = () => {
-    navigator.clipboard.writeText(merkleRoot);
-    setCopiedHash(true);
-    setTimeout(() => setCopiedHash(false), 2000);
+  const [copiedHash, setCopiedHash] = useState<"idle" | "copied" | "failed">("idle");
+  const [copiedLink, setCopiedLink] = useState<"idle" | "copied" | "failed">("idle");
+  const timers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+
+  const flash = (setter: (v: "idle" | "copied" | "failed") => void, value: "copied" | "failed") => {
+    setter(value);
+    const t = setTimeout(() => {
+      timers.current.delete(t);
+      setter("idle");
+    }, 2000);
+    timers.current.add(t);
   };
 
-  const handlePrint = () => {
-    if (typeof window !== "undefined") {
-      window.print();
+  const copyText = async (text: string, setter: (v: "idle" | "copied" | "failed") => void) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      flash(setter, "copied");
+    } catch {
+      flash(setter, "failed");
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300 relative overflow-x-hidden antialiased">
-      {/* Background radial gradients for subtle ambient glow */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-[140px]" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-indigo-500/10 rounded-full blur-[130px]" />
-      </div>
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
-        {/* Section 1: Top Navigation Bar */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-medium transition-all active:scale-[0.97] shadow-sm backdrop-blur-md"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Bunon</span>
-            </Link>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>EU ESPR / CIRPASS Conforming DPP</span>
-            </div>
+  // ------------------------------------------------------------------ loading (pre-hydration)
+  if (!hydrated) {
+    return (
+      <PageShell>
+        <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col gap-8 pt-10" aria-busy="true">
+          <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+            <span className="section-index text-xs">{t("Product report")}</span>
           </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={handlePrint}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white text-xs font-medium transition-all active:scale-[0.97] shadow-sm hover:border-slate-600"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-400" />
-              <span>Print / Save PDF</span>
-            </button>
-            <button
-              onClick={handleCopyHash}
-              className="inline-flex items-center justify-center p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white text-xs transition-all active:scale-[0.97]"
-              title="Share / Copy Link"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-2 font-mono text-xs text-ink-muted" role="status" aria-live="polite">
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+            <span>{t("Loading report…")}</span>
           </div>
-        </header>
-
-        {/* Section 2: Hero Garment Header Card */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/80 border border-slate-800/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none select-none">
-            <QrCode className="w-56 h-56 text-white" />
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="px-3 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono text-xs font-bold tracking-wider uppercase">
-                STYLE: {styleCode}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 text-xs font-medium">
-                Season: Spring / Summer 2026
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center gap-1.5">
-                <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Live Customs Passport
-              </span>
-            </div>
-
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 font-display">
-                Mens Relaxed Fit Organic Denim Jacket
-              </h1>
-              <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-                Registered under European Union Eco-design for Sustainable Products Regulation (ESPR Directive 2024/1781) & CIRPASS Digital Product Passport standard.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Tier-1 Manufacturer
-                </div>
-                <div className="text-sm font-medium text-slate-200">
-                  Ashulia Export Apparel Ltd, Dhaka, Bangladesh
-                </div>
-                <div className="text-xs text-slate-400 font-mono">
-                  BGMEA License: <span className="text-slate-300">BGMEA-REG-84210</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Consignee / Target Brand
-                </div>
-                <div className="text-sm font-medium text-slate-200">
-                  Inditex / H&M Group European Distribution
-                </div>
-                <div className="text-xs text-slate-400">
-                  EORI Verified: <span className="text-slate-300 font-mono">NL824102941B01</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Cryptographic Trust Bar */}
-            <div className="pt-4 border-t border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    Cryptographically Reconciled & GOTS Registry Verified
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    All supply chain tiers anchored on zero-knowledge cryptographic state.
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2">
-                <Hash className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <div className="font-mono text-[11px] text-slate-400 truncate max-w-[210px] sm:max-w-[280px]">
-                  {merkleRoot}
-                </div>
-                <button
-                  onClick={handleCopyHash}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition-all active:scale-[0.97]"
-                >
-                  {copiedHash ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 3: Interactive Tabbed Exploration */}
-        <section className="space-y-6">
-          {/* Tab Navigation */}
-          <div className="flex p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800/80 backdrop-blur-md">
-            <button
-              onClick={() => setActiveTab("materials")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] ${
-                activeTab === "materials"
-                  ? "bg-slate-800 text-emerald-400 shadow-md border border-slate-700/60"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
-              }`}
-            >
-              <Leaf className="w-4 h-4" />
-              <span>Material & ESG</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("durability")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] ${
-                activeTab === "durability"
-                  ? "bg-slate-800 text-cyan-400 shadow-md border border-slate-700/60"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
-              }`}
-            >
-              <Scale className="w-4 h-4" />
-              <span>Durability & Care</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("traceability")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] ${
-                activeTab === "traceability"
-                  ? "bg-slate-800 text-indigo-400 shadow-md border border-slate-700/60"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>Traceability Journey</span>
-            </button>
-          </div>
-
-          {/* TAB 1: Material Composition & Sustainability */}
-          {activeTab === "materials" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in duration-300">
-              {/* Circular Breakdown & Fibers */}
-              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                    <Shirt className="w-4 h-4 text-emerald-400" />
-                    Fiber Composition
-                  </h3>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                    Mono-Material Shell
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Item 1 */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-slate-200">GOTS Certified Organic Cotton (Shell)</span>
-                      <span className="text-emerald-400 font-mono font-bold">100.0%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                      <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full w-full" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Rain-fed organic cultivation in Rangpur region. Zero synthetic GMO seeds or organophosphate pesticides.
-                    </p>
-                  </div>
-
-                  {/* Item 2 */}
-                  <div className="space-y-1.5 pt-2 border-t border-slate-800/60">
-                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-slate-200">Recycled Zinc Alloy (YKK Fasteners & Rivets)</span>
-                      <span className="text-cyan-400 font-mono font-bold">85.4%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                      <div className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-full w-[85.4%]" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Global Recycled Standard (GRS) v4.0 certified post-industrial recycled metal.
-                    </p>
-                  </div>
-
-                  {/* Item 3 */}
-                  <div className="space-y-1.5 pt-2 border-t border-slate-800/60">
-                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-slate-200">Zero Hazardous Discharge (ZDHC MRSL Level 3)</span>
-                      <span className="text-emerald-400 font-mono font-bold">0% Detected</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                      <div className="h-full bg-emerald-500 rounded-full w-0" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Clean chemistry batch testing via OEKO-TEX Standard 100 Class I (safe for sensitive skin).
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Carbon & Environmental Impact */}
-              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-400" />
-                      LCA Carbon & Water Footprint
-                    </h3>
-                    <span className="text-xs text-slate-400 font-mono">ISO 14067 LCA</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 mb-4">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                      Cradle-to-Gate Carbon Equivalent
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-extrabold text-emerald-400 font-mono">4.8</span>
-                      <span className="text-sm font-medium text-slate-300">kg CO2e / garment</span>
-                    </div>
-                    <div className="mt-2 text-xs text-emerald-400/90 font-medium flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      42% below conventional denim industry average (8.3 kg CO2e)
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                      <div className="text-[11px] text-slate-400 font-medium">Water Consumption</div>
-                      <div className="text-lg font-bold text-cyan-400 font-mono mt-0.5">380 Liters</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">-74% vs Conventional</div>
-                    </div>
-                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                      <div className="text-[11px] text-slate-400 font-medium">Renewable Energy Ratio</div>
-                      <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">68.2% Solar</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">Rooftop Solar PV Microgrid</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Verified against Higg FEM (Facility Environmental Module) 2025 verified audit score: 94.6/100.</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: Physical Durability & Care */}
-          {activeTab === "durability" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-in fade-in duration-300">
-              {/* Metric 1 */}
-              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
-                <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                  <Scissors className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase font-bold tracking-wider text-slate-400">Tensile Tear Strength</div>
-                  <div className="text-2xl font-black text-white font-mono mt-1">42.0 N</div>
-                  <div className="text-xs text-emerald-400 font-semibold mt-1">ISO 13937-2 Certified</div>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Heavy-duty ring-spun warp and weft warp withstands up to 42 Newtons of tear force, engineered for 10+ years of active wear.
-                </p>
-              </div>
-
-              {/* Metric 2 */}
-              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <Droplets className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase font-bold tracking-wider text-slate-400">Colorfastness to Washing</div>
-                  <div className="text-2xl font-black text-white font-mono mt-1">Grade 4-5</div>
-                  <div className="text-xs text-emerald-400 font-semibold mt-1">ISO 105-C06 Standard</div>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  High-exhaustion natural indigo dyeing ensures maximum shade retention without dye bleeding into domestic wash cycles.
-                </p>
-              </div>
-
-              {/* Metric 3 */}
-              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                  <Wrench className="w-5 h-5 text-indigo-400" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase font-bold tracking-wider text-slate-400">Repairability Index</div>
-                  <div className="text-2xl font-black text-white font-mono mt-1">8.4 / 10</div>
-                  <div className="text-xs text-indigo-400 font-semibold mt-1">French AGEC Law Standard</div>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Standardized copper-shank rivet hardware can be disassembled using standard hand tools. Free replacement buttons available via brand portal.
-                </p>
-              </div>
-
-              {/* Care Instructions & End of Life */}
-              <div className="md:col-span-3 p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                    <Thermometer className="w-4 h-4 text-cyan-400" />
-                    Recommended Consumer Care Guidelines
-                  </h4>
-                  <ul className="text-xs text-slate-300 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className="text-cyan-400 font-bold">•</span>
-                      <span><strong>Wash Cold (30°C / 85°F):</strong> Wash inside-out with similar dark colors to preserve natural indigo patina.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-cyan-400 font-bold">•</span>
-                      <span><strong>Line Dry Only:</strong> Avoid tumble drying; hang dry in shaded airflow to retain cotton fiber tensile strength.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-cyan-400 font-bold">•</span>
-                      <span><strong>Spot Clean & Freeze:</strong> Only wash when soiled. Spot cleaning prolongs garment lifespan significantly.</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4 text-emerald-400" />
-                    Circular End-of-Life Instructions
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    This denim jacket is 98.5% mono-material cellulose. When no longer wearable, return to any EU brand partner drop-point for mechanical fiber recycling or deposit in designated municipal textile recycling streams.
-                  </p>
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 font-mono">
-                    Recycling Category: Category 6203 / Pure Cotton Fabric Scrap
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: Traceability Journey (Farm to Port) */}
-          {activeTab === "traceability" && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-800 gap-2">
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-indigo-400" />
-                    Verifiable Farm-to-Port Custody Chain
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Cryptographic chain-of-custody recorded at each transformation node.
-                  </p>
-                </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
-                  <span>6 of 6 Verified Epochs</span>
-                </div>
-              </div>
-
-              {/* Timeline Steps */}
-              <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-emerald-500 before:via-cyan-500 before:to-indigo-500">
-                {/* Step 1 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-emerald-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Step 1 • Raw Cotton Cultivation</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2025-Q3</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">Rangpur Organic Farmer Collective</div>
-                    <div className="text-xs text-slate-400">Rangpur Division, Northern Bangladesh</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 text-[11px] font-mono border border-emerald-500/20">
-                        <Award className="w-3 h-3" /> GOTS-AG-7102
-                      </span>
-                      <span className="text-[11px] text-slate-400">Certified Organic Raw Fiber</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-emerald-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Step 2 • Ring Spinning & Combing</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2025-Q4</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">Apex Spinning Mills Ltd</div>
-                    <div className="text-xs text-slate-400">Narayanganj Industrial Zone, Dhaka</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 text-[11px] font-mono border border-emerald-500/20">
-                        <Award className="w-3 h-3" /> GOTS-BD-9104
-                      </span>
-                      <span className="text-[11px] text-slate-400">Ne 16/1 Ring-Spun Organic Yarn</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-cyan-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Step 3 • Clean Indigo Dyeing & Weaving</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2026-01</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">Dhaka Eco-Tex Dyeing Ltd</div>
-                    <div className="text-xs text-slate-400">Gazipur Eco-Industrial Cluster</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 text-[11px] font-mono border border-cyan-500/20">
-                        <Award className="w-3 h-3" /> OEKO-26-90412
-                      </span>
-                      <span className="text-[11px] text-slate-400">ZDHC Level 3 Certified Zero Discharge</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 4 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-cyan-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Step 4 • Trims & Hardware Forging</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2026-01</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">YKK Trim Division Bangladesh</div>
-                    <div className="text-xs text-slate-400">Savar Export Processing Zone (DEPZ)</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 text-[11px] font-mono border border-cyan-500/20">
-                        <Award className="w-3 h-3" /> GRS-TR-4410
-                      </span>
-                      <span className="text-[11px] text-slate-400">85.4% Recycled Zinc Alloy Zipper & Rivets</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 5 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-indigo-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Step 5 • Cut, Make & Trim (Garment Assembly)</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2026-02</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">Ashulia Export Apparel Ltd</div>
-                    <div className="text-xs text-slate-400">Ashulia, Dhaka, Bangladesh</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 text-[11px] font-mono border border-indigo-500/20">
-                        <Award className="w-3 h-3" /> BSCI 98.4 (A-Grade)
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 text-[11px] font-mono border border-emerald-500/20">
-                        LEED Platinum Factory
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 6 */}
-                <div className="relative">
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-indigo-400 flex items-center justify-center">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Step 6 • Port of Entry Clearance</span>
-                      <span className="text-[11px] font-mono text-slate-500">Epoch: 2026-03</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">Port of Rotterdam (ECT Delta Terminal)</div>
-                    <div className="text-xs text-slate-400">Rotterdam, The Netherlands (EU Single Market Entry)</div>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 text-[11px] font-mono border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" /> Customs DPP Cleared
-                      </span>
-                      <span className="text-[11px] text-slate-400">TARIC: 6203.32.9000</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Section 4: Cryptographic Proof Drawer / Footer */}
-        <section className="rounded-3xl bg-slate-900/40 border border-slate-800/80 p-6 sm:p-8 backdrop-blur-md space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <Database className="w-5 h-5 text-indigo-400" />
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Cloudflare R2 Immutable Vault Proofs
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Raw cryptographically signed audit certificates and zero-knowledge batch proofs.
-                </p>
-              </div>
-            </div>
-            <div className="text-xs font-mono text-slate-500">
-              SHA-256 Content-Addressed
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              {
-                title: "GOTS v7.0 Scope Certificate",
-                issuer: "Control Union Inspections B.V.",
-                hash: "0x8fa10b99c2...41a3",
-                fullHash: "0x8fa10b99c2419401bfec2718903e127641a3998b",
-                date: "2025-11-14 09:24 UTC",
-                certNo: "PRJ 842109/01"
-              },
-              {
-                title: "OEKO-TEX ECO PASSPORT Test",
-                issuer: "Hohenstein Institute Germany",
-                hash: "0x44dc18ae77...912f",
-                fullHash: "0x44dc18ae772183cbafe190104192bca9912f4510",
-                date: "2026-01-08 14:12 UTC",
-                certNo: "26.0.90412"
-              },
-              {
-                title: "LEED Platinum Energy Audit",
-                issuer: "U.S. Green Building Council (USGBC)",
-                hash: "0x91ef380bca...8812",
-                fullHash: "0x91ef380bca2931048bc82103847aa1828812cc93",
-                date: "2025-12-20 18:30 UTC",
-                certNo: "LEED-BD-2025-99"
-              }
-            ].map((proof, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-2 hover:border-slate-700 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-semibold text-slate-200">{proof.title}</span>
-                    <Lock className="w-3 h-3 text-slate-500" />
-                  </div>
-                  <div className="text-[11px] text-slate-400">{proof.issuer}</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">Ref: {proof.certNo}</div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                  <div className="font-mono text-[10px] text-indigo-400 truncate max-w-[140px]" title={proof.fullHash}>
-                    {proof.hash}
-                  </div>
-                  <a
-                    href={`https://r2.bunon.io/vault/${proof.certNo.replace(/\s+/g, "_")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-white font-medium hover:underline"
-                  >
-                    <span>Inspect</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="glass-card h-[120px]" />
             ))}
           </div>
+        </main>
+      </PageShell>
+    );
+  }
 
-          <div className="pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <div>
-              Bunon Trust Layer v2.4 • Connected to EU DPP Registry Gateway • Node: <span className="font-mono text-slate-400">eu-central-dpp-node-04</span>
+  // ------------------------------------------------------------------ unknown style: never fabricate
+  if (!style) {
+    return (
+      <PageShell>
+        <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col gap-8 pt-10">
+          <section className="flex flex-col gap-8">
+            <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+              <span className="section-index text-xs">{t("Product report")}</span>
+              <DemoDataBadge />
+            </div>
+            <div className="space-y-3 max-w-4xl">
+              <h1 className="display-title font-bold tracking-tight text-ink flex items-center gap-3">
+                <SearchX className="w-8 h-8 shrink-0 text-danger" aria-hidden="true" />
+                {t("Report not found.")}
+              </h1>
+              <p className="text-base text-ink-muted leading-relaxed max-w-[60ch]">
+                {t("There is no report for order")} <strong className="font-mono text-ink">“{styleCode}”</strong>.{" "}
+                {t("Bunon only shows reports for orders on file and never makes one up.")}
+              </p>
+              <p className="text-sm text-ink-faint leading-relaxed max-w-[60ch]">
+                {t("Orders a factory adds in this demo are stored in that browser only, and factories only see their own products. Check the code, or pick a product from the reports list.")}
+              </p>
             </div>
             <div>
-              Latest Consensus Sync: <span className="font-mono text-slate-400">2026-03-15 04:12:09 UTC</span>
+              <Link href="/reports" className="btn-primary-action rounded-[4px]">
+                <span>{t("Browse all reports")}</span>
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </section>
+        </main>
+      </PageShell>
+    );
+  }
+
+  // ------------------------------------------------------------------ passport
+  const clearance = styleClearance(style);
+  const conflictFacilities = clearance.expiredTiers.map((tier) => tier.facilityName).join(", ");
+  const statusText = clearance.cleared ? "Cleared" : `Held: certificate conflict at ${conflictFacilities}`;
+  const passportUrl = origin ? `${origin}/passport/${encodeURIComponent(style.code)}` : "";
+  const generatedOn = new Date().toLocaleDateString("en-GB");
+  // The one next step: fix the hold when someone signed in can, otherwise print the report.
+  const fixIsPrimary = !clearance.cleared && !!session;
+  const nextStep = session
+    ? {
+        href: session.role === "factory" ? "/factory/order" : `/buyer/verify?order=${encodeURIComponent(style.code)}`,
+        label: session.role === "factory" ? "Upload the renewed certificate" : "Run the checks on this order",
+      }
+    : null;
+
+  return (
+    <PageShell>
+      {/* PRINT-ONLY PASSPORT SUMMARY */}
+      <div className="hidden print:block p-8 font-mono text-black bg-white border-4 border-black space-y-6">
+        {/* Header Strip */}
+        <div className="flex justify-between items-start border-b-2 border-black pb-4">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-gray-600 font-bold">
+              Bunon compliance platform · exporter-prepared document
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight mt-1">Product passport summary (draft fields)</h1>
+            <p className="text-xs text-gray-700 mt-0.5">
+              Supply-chain certificate status · QR data carrier (iso/iec 18004)
+            </p>
+          </div>
+          <div className="text-right text-xs space-y-0.5">
+            <div>
+              <strong>Passport ID:</strong> {style.passportId}
+            </div>
+            <div>
+              <strong>Status:</strong> {statusText.toUpperCase()}
+            </div>
+            <div>
+              <strong>Generated:</strong> {generatedOn}
             </div>
           </div>
-        </section>
+        </div>
+
+        {/* QR Code and Key Identifiers Grid */}
+        <div className="grid grid-cols-12 gap-6 items-center border-b-2 border-black pb-6">
+          <div className="col-span-3 flex flex-col items-center justify-center p-3 border border-black bg-white">
+            {passportUrl ? (
+              <QRCodeSVG value={passportUrl} size={135} level="H" fgColor="#000000" bgColor="#ffffff" />
+            ) : (
+              <div className="w-[135px] h-[135px]" />
+            )}
+            <span className="text-[9px] font-bold mt-1 text-center">Scan to open passport</span>
+          </div>
+
+          <div className="col-span-9 grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Style code & title:</span>
+              <p className="font-bold">
+                #{style.code} — {style.title}
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Harmonized tariff (HS) code:</span>
+              <p className="font-bold">{style.hsCode}</p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Exporter BIN:</span>
+              <p className="font-bold">{style.exporterBin}</p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Importer EORI:</span>
+              <p className="font-bold">{style.importerEori}</p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Shipment volume:</span>
+              <p className="font-bold">
+                {style.volume} ({style.garmentType})
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Buyer & purchase order:</span>
+              <p className="font-bold">
+                {style.buyer} // {style.purchaseOrder}
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Port of lading:</span>
+              <p className="font-bold">{style.portOfLading}</p>
+            </div>
+            <div>
+              <span className="text-gray-600 uppercase text-[10px]">Point of entry:</span>
+              <p className="font-bold">
+                {style.destination} [{style.portOfEntryCode}]
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Technical Material & Environmental Declarations */}
+        <div className="grid grid-cols-3 gap-4 border-b-2 border-black pb-4 text-xs">
+          <div>
+            <span className="text-gray-600 uppercase text-[10px]">Fiber composition:</span>
+            <p className="font-bold">{style.fiberComposition}</p>
+            <p className="text-xs text-gray-700">{style.fiberStandard}</p>
+          </div>
+          <div>
+            <span className="text-gray-600 uppercase text-[10px]">Chemical safety (MRSL):</span>
+            <p className="font-bold">{style.chemicalSafety}</p>
+            <p className="text-xs text-gray-700">{style.chemicalStandard}</p>
+          </div>
+          <div>
+            <span className="text-gray-600 uppercase text-[10px]">Carbon intensity:</span>
+            <p className="font-bold">{style.carbonFootprint} per unit</p>
+            <p className="text-xs text-gray-700">{style.carbonBaselineReduction}</p>
+          </div>
+        </div>
+
+        {/* Merkle root & status stamp */}
+        <div className="pt-2 flex justify-between items-end text-xs">
+          <div className="space-y-1 max-w-[420px]">
+            <span className="text-gray-600 uppercase text-[10px]">Supply-chain Merkle root (SHA-256):</span>
+            <p className="text-xs break-all bg-gray-100 p-2 border border-gray-400">
+              {tree ? tree.root : "computing…"}
+            </p>
+            <p className="text-[9px] text-gray-600">
+              Root of a SHA-256 Merkle tree over the {style.tiers.length} supplier-tier certificate records, recomputed
+              in the browser that printed this page. Unsigned.
+            </p>
+          </div>
+
+          <div className="border-2 border-black p-4 text-center min-w-[200px] max-w-[260px]">
+            <div className="text-[10px] font-bold uppercase">Certificate status</div>
+            {clearance.cleared ? (
+              <>
+                <div className="text-xs font-black text-green-800 my-1">[Cleared]</div>
+                <div className="text-[9px] text-gray-600">No expired supplier certificates on file</div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-black text-red-800 my-1">[Held — certificate conflict]</div>
+                <div className="text-[9px] text-gray-700">AT {conflictFacilities.toUpperCase()}</div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* SCREEN UI */}
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col gap-12 pt-10">
+        <section className="flex flex-col gap-8">
+          <ProductSwitcher current={style.code} />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-hairline)] pb-3">
+            <span className="section-index text-xs">{t("Product report")}</span>
+            <DemoDataBadge />
+          </div>
+
+          <div className="space-y-3 max-w-4xl">
+            <h1 className="display-title font-bold tracking-tight text-ink">{style.title}</h1>
+            <p className="text-base text-ink-muted leading-relaxed max-w-[60ch]">
+              {t("Order")} #{style.code} · {t("shipping to")} {style.destination}
+            </p>
+          </div>
+
+          {/* Clearance status, derived from the tier certificate records */}
+          {clearance.cleared ? (
+            <div className="p-4 rounded-[4px] bg-surface/80 border border-line-strong flex items-start gap-3" role="status">
+              <ShieldCheck className="w-5 h-5 text-ink-muted shrink-0" aria-hidden="true" />
+              <div className="space-y-1">
+                <div className="font-display font-semibold text-ink text-lg">{t("Cleared")}</div>
+                <p className="text-sm text-ink-muted">{t("None of the supplier certificates on file is marked expired.")}</p>
+                {session?.role === "buyer" && nextStep && (
+                  <Link
+                    href={nextStep.href}
+                    className="no-print inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-ink underline"
+                  >
+                    {t(nextStep.label)}
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-[4px] bg-danger-soft/90 border border-danger flex items-start gap-3" role="status">
+              <AlertTriangle className="w-5 h-5 text-danger shrink-0" aria-hidden="true" />
+              <div className="space-y-2">
+                <div className="font-display font-semibold text-danger text-lg">{t("On hold")}</div>
+                <ul className="text-sm text-danger space-y-0.5">
+                  {clearance.expiredTiers.map((tier) => (
+                    <li key={tier.id}>
+                      {tier.facilityName}: {tier.certType} <span className="font-mono">{tier.certNumber}</span> {t("expired")}
+                      {tier.validThrough ? (
+                        <>
+                          {" "}
+                          ({t("valid through")} <span className="font-mono">{formatIsoDate(tier.validThrough)}</span>)
+                        </>
+                      ) : null}
+                      .
+                    </li>
+                  ))}
+                </ul>
+                {nextStep && (
+                  <Link
+                    href={nextStep.href}
+                    onClick={() => session?.role === "factory" && setActiveSupplierStyleId(style.code)}
+                    className="no-print btn-primary-action rounded-[4px]"
+                  >
+                    <span>{t(nextStep.label)}</span>
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* What the product is made of */}
+          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="glass-card p-6 flex flex-col gap-1">
+              <dt className="text-sm text-ink-muted">{t("Fibre composition")}</dt>
+              <dd className="text-3xl font-bold font-display text-ink">{style.fiberComposition.split(",")[0]}</dd>
+              <dd className="text-xs text-ink-muted">{style.fiberStandard}</dd>
+            </div>
+            <div className="glass-card p-6 flex flex-col gap-1">
+              <dt className="text-sm text-ink-muted">{t("Chemical safety")}</dt>
+              <dd className="text-3xl font-bold font-display text-ink">{style.chemicalSafety}</dd>
+              <dd className="text-xs text-ink-muted">{style.chemicalStandard}</dd>
+            </div>
+            <div className="glass-card p-6 flex flex-col gap-1">
+              <dt className="text-sm text-ink-muted">{t("Carbon footprint")}</dt>
+              <dd className="text-3xl font-bold font-display text-ink tabular-nums">{style.carbonFootprint}</dd>
+              <dd className="text-xs text-ink-muted">{style.carbonBaselineReduction}</dd>
+            </div>
+          </dl>
+
+          {/* Print and share */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 no-print">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className={
+                fixIsPrimary
+                  ? "btn-tactile-hollow min-h-[44px] px-5 text-sm font-semibold flex items-center justify-center gap-2 rounded-[4px]"
+                  : "btn-primary-action rounded-[4px]"
+              }
+            >
+              <Printer className="w-4 h-4" aria-hidden="true" />
+              <span>{t("Print report summary")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => passportUrl && copyText(passportUrl, setCopiedLink)}
+              disabled={!passportUrl}
+              className="btn-tactile-hollow min-h-[44px] px-5 text-sm font-semibold flex items-center justify-center gap-2 rounded-[4px] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {copiedLink === "copied" ? (
+                <Check className="w-4 h-4 text-ink-muted" aria-hidden="true" />
+              ) : (
+                <QrCode className="w-4 h-4" aria-hidden="true" />
+              )}
+              <span aria-live="polite">
+                {copiedLink === "copied" ? t("Copied report link") : copiedLink === "failed" ? t("Copy failed") : t("Copy report link")}
+              </span>
+            </button>
+          </div>
+          <details className="no-print text-xs">
+            <summary className="cursor-pointer min-h-[44px] inline-flex items-center text-sm font-semibold text-ink-muted">
+              {t("Technical details")}
+            </summary>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+              <span className="text-ink-faint">Supply-chain Merkle root (SHA-256):</span>
+              <span className="font-mono text-ink font-bold tabular-nums break-all" aria-live="polite">
+                {tree ? shortHash(tree.root, 18, 8) : "computing…"}
+              </span>
+            <button
+              type="button"
+              onClick={() => tree && copyText(tree.root, setCopiedHash)}
+              disabled={!tree}
+              className="btn-tactile-hollow min-h-[44px] px-4 text-xs flex items-center justify-center gap-2 rounded-[4px] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {copiedHash === "copied" ? (
+                <Check className="w-4 h-4 text-ink-muted" aria-hidden="true" />
+              ) : (
+                <Copy className="w-4 h-4" aria-hidden="true" />
+              )}
+              <span aria-live="polite">
+                {!tree
+                  ? "Merkle root computing…"
+                  : copiedHash === "copied"
+                    ? "Copied Merkle root"
+                    : copiedHash === "failed"
+                      ? "Copy failed"
+                      : "Copy Merkle root"}
+              </span>
+            </button>
+            </div>
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ink-muted">
+              <dt>HS code</dt>
+              <dd className="font-mono text-ink">{style.hsCode}</dd>
+              <dt>Destination</dt>
+              <dd className="text-ink">{style.destination}</dd>
+              <dt>Passport ID</dt>
+              <dd className="font-mono text-ink">{style.passportId}</dd>
+              <dt>Importer EORI</dt>
+              <dd className="font-mono text-ink">{style.importerEori}</dd>
+              <dt>Exporter BIN</dt>
+              <dd className="font-mono text-ink">{style.exporterBin}</dd>
+            </dl>
+          </details>
+        </section>
+
+        {/* QR code and how the product is made */}
+        <section className="grid grid-cols-1 items-start gap-6 border-t border-[var(--border-hairline)] pt-6 md:grid-cols-[auto_1fr]">
+          <div className="glass-card flex flex-col items-center gap-3 p-5">
+            <span className="section-index self-start text-xs">{t("QR code for the care label")}</span>
+            <div className="flex h-[141px] w-[141px] items-center justify-center rounded-[3px] border border-ink bg-white p-2.5">
+              {passportUrl ? (
+                <QRCodeSVG value={passportUrl} size={120} level="H" fgColor="#111A36" bgColor="#ffffff" />
+              ) : (
+                <Loader2 className="h-5 w-5 animate-spin text-success" aria-label="Preparing QR code" />
+              )}
+            </div>
+            <p className="max-w-[20ch] text-center text-xs text-ink-muted">{t("Scan with any phone camera to open this report.")}</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Materials & origin", value: style.specifications.materials },
+                { label: "Dyeing & processing", value: style.specifications.dyeing },
+                { label: "Circularity & hardware", value: style.specifications.circularity },
+              ].map((spec) => (
+                <div key={spec.label} className="glass-card p-4">
+                  <div className="text-xs text-ink-muted">{t(spec.label)}</div>
+                  <div className="mt-1 text-sm font-semibold text-ink">{spec.value}</div>
+                </div>
+              ))}
+            </div>
+            <p className="flex items-center gap-2 text-xs text-ink-muted">
+              <Lock className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+              {t("Cost sheets and pattern files are never part of this report.")}
+            </p>
+          </div>
+        </section>
+      </main>
+    </PageShell>
   );
 }

@@ -1,9 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import SmoothScroll from "@/components/SmoothScroll";
+import StoreHydrator from "@/components/StoreHydrator";
+import { LangRoot } from "@/components/Preferences";
+
+// Dark is the default (set on <html> below). This runs before first paint and only switches to light
+// for visitors who chose it, so nobody sees a flash (key shared with Preferences.tsx).
+const THEME_INIT = `try{if(localStorage.getItem("bunon-theme")==="light")delete document.documentElement.dataset.theme}catch(e){}`;
 
 export const metadata: Metadata = {
-  title: "Bunon (বুনন) — On-Premises Compliance Shield & DPP Forge",
-  description: "Autonomous Digital Product Passport factory and compliance fraud shield for Bangladesh's $38.7B RMG export machine.",
+  title: "Bunon · Answer every buyer once",
+  description:
+    "Bunon checks a garment factory's certificates and licences, then drafts each buyer's compliance questionnaire from that verified evidence. Prototype with fictional demo data.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0E1A",
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({
@@ -12,9 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-[#090c15] text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
-        {children}
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
+      <body className="bg-canvas text-ink antialiased">
+        {/* Drifting fog over the background painting (see .atmosphere in globals.css) */}
+        <div className="atmosphere" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <StoreHydrator />
+        <SmoothScroll>
+          <LangRoot>{children}</LangRoot>
+        </SmoothScroll>
       </body>
     </html>
   );

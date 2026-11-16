@@ -1,0 +1,250 @@
+/**
+ * Regenerates the deterministic demo seed:
+ *   - src/lib/seed/users-seed.ts   (two demo users, scrypt-hashed "demo123")
+ *   - src/lib/seed/ledger-seed.ts  (five genesis blocks forming a valid hash chain)
+ *   - prints the matching SQL INSERT statements for init_db.sql
+ *
+ * Run:  node scripts/generate-seed.ts
+ * Everything is derived from fixed inputs, so re-running produces identical output unless the
+ * catalog (src/lib/styles.ts) or the certificate fixtures change — in which case the ledger's
+ * sealed root legitimately changes too and tests/seed.test.ts tells you to regenerate.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { hashPassword } from "../src/lib/server/session.ts";
+import { appendBlock, type LedgerBlock, type LedgerBlockInput } from "../src/lib/ledger.ts";
+import { sha256Hex } from "../src/lib/crypto.ts";
+import { STYLES_CATALOG } from "../src/lib/styles.ts";
+import { buildProvenanceTree } from "../src/lib/provenance.ts";
+import { CERTIFICATE_DOCUMENT_FIXTURES } from "../src/lib/fixtures/certificate-documents.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, "..");
+const outDir = join(root, "src", "lib", "seed");
+mkdirSync(outDir, { recursive: true });
+
+const DEMO_PASSWORD = "demo123";
+
+const users = [
+  {
+    id: "usr-factory-01",
+    email: "factory@nodiwear.example",
+    full_name: "Tariqul Islam (demo compliance officer)",
+    organization: "Nodiwear Apparel Ltd. (fictional factory)",
+    role: "factory" as const,
+    clearance_level: "FACTORY COMPLIANCE",
+    cluster_id: "nodiwear-01",
+    avatar_initial: "তা",
+  },
+  {
+    id: "usr-buyer-01",
+    email: "buyer@nordlys-apparel.example",
+    full_name: "Sofia Lindqvist (demo sourcing manager)",
+    organization: "Nordlys Apparel AB (fictional EU brand)",
+    role: "buyer" as const,
+    clearance_level: "BUYER",
+    cluster_id: "nordlys-eu",
+    avatar_initial: "S",
+  },
+];
+
+const seededUsers = [];
+for (const u of users) {
+  // Deterministic salt so the generator is reproducible (still 128-bit, per-user).
+  const salt = createHash("sha256").update(`bunon-seed-salt:${u.email}`).digest().subarray(0, 16);
+  seededUsers.push({ ...u, password_hash: await hashPassword(DEMO_PASSWORD, Buffer.from(salt)) });
+}
+
+const dn = STYLES_CATALOG["DN-2026"];
+const dnTree = await buildProvenanceTree(dn);
+const expiredDocHash = await sha256Hex(CERTIFICATE_DOCUMENT_FIXTURES.expired.text);
+const apex = dn.tiers.find((t) => t.id === "t3-yarn")!;
+
+const events: Array<{ time: string; input: LedgerBlockInput }> = [
+  {
+    time: "2026-11-07T12:50:00.000Z",
+    input: {
+      type: "BUYER QUERY",
+      actor: "Nordlys Apparel buyer (demo)",
+      summary: `Buyer checked the supplier records for ${dn.code} (PO ${dn.purchaseOrder}) before confirming the order.`,
+      styleCode: dn.code,
+      payloadHash: null,
+      status: "verified",
+    },
+  },
+  {
+    time: "2026-11-07T13:35:00.000Z",
+    input: {
+      type: "CONFLICT DETECTED",
+      actor: "Bunon Compliance Engine",
+      summary: `The yarn certificate ${apex.certNumber} from ${apex.facilityName} expired on ${apex.validThrough}. The order cannot be confirmed until a valid certificate is on file.`,
+      styleCode: dn.code,
+      payloadHash: expiredDocHash,
+      status: "flagged",
+    },
+  },
+  {
+    time: "2026-11-07T13:38:00.000Z",
+    input: {
+      type: "SUPPLIER CHASE",
+      actor: "Automated Supplier Dispatch",
+      summary: `Renewal requested from ${apex.facilityName} (${apex.contactPerson}, ${apex.contactChannel}) for the renewed GOTS scope certificate.`,
+      styleCode: dn.code,
+      payloadHash: null,
+      status: "verified",
+    },
+  },
+  {
+    time: "2026-11-07T13:40:00.000Z",
+    input: {
+      type: "REGISTRY CHECK",
+      actor: "Simulated certificate registry",
+      summary: "The simulated registry lists renewal DEMO-GOTS-849201-2026.001 for Padmaloom Spinning Mills Ltd. as active through 2027-11-14. Waiting for the factory to upload it.",
+      styleCode: dn.code,
+      payloadHash: null,
+      status: "verified",
+    },
+  },
+  {
+    time: "2026-11-07T13:42:00.000Z",
+    input: {
+      type: "PROVENANCE ROOT SEALED",
+      actor: "Bunon Regulatory Engine",
+      summary: `Supplier chain for ${dn.code} (${dn.volume}) recorded with one problem: the Padmaloom yarn certificate has expired. Report held until the renewed certificate is checked.`,
+      styleCode: dn.code,
+      payloadHash: dnTree.root,
+      status: "flagged",
+    },
+  },
+];
+
+const chain: LedgerBlock[] = [];
+let prev: LedgerBlock | null = null;
+for (const e of events) {
+  const block = await appendBlock(prev, e.input, e.time);
+  chain.push(block);
+  prev = block;
+}
+
+const header = `/* AUTO-GENERATED by scripts/generate-seed.ts — do not edit by hand. Run \`npm run seed:generate\`. */\n`;
+
+writeFileSync(
+  join(outDir, "users-seed.ts"),
+  `${header}import type { UserRole } from "../server/session.ts";
+
+export interface SeedUser {
+  id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  organization: string;
+  role: UserRole;
+  clearance_level: string;
+  cluster_id: string;
+  avatar_initial: string;
+}
+
+/** Demo credentials: password "${DEMO_PASSWORD}" for both accounts (scrypt-hashed). */
+export const SEED_USERS: SeedUser[] = ${JSON.stringify(seededUsers, null, 2)};
+`
+);
+
+writeFileSync(
+  join(outDir, "ledger-seed.ts"),
+  `${header}import type { LedgerBlock } from "../ledger.ts";
+
+/** Genesis chain (oldest first). Block ${chain[chain.length - 1].block} seals the DN-2026 Merkle root as of minting. */
+export const SEED_LEDGER: LedgerBlock[] = ${JSON.stringify(chain, null, 2)};
+
+export const SEED_SEALED_DN_2026_ROOT = ${JSON.stringify(dnTree.root)};
+`
+);
+
+const sqlStr = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
+const userRows = seededUsers
+  .map(
+    (u) =>
+      `  (${[u.id, u.email, u.password_hash, u.full_name, u.organization, u.role, u.clearance_level, u.cluster_id, u.avatar_initial].map(sqlStr).join(", ")})`
+  )
+  .join(",\n");
+const ledgerRows = chain
+  .map(
+    (b) =>
+      `  (${b.block}, ${sqlStr(b.id)}, ${sqlStr(b.time)}, ${sqlStr(b.type)}, ${sqlStr(b.actor)}, ${sqlStr(b.summary)}, ${sqlStr(b.styleCode ?? null)}, ${sqlStr(b.payloadHash ?? null)}, ${sqlStr(b.prevHash)}, ${sqlStr(b.hash)}, ${sqlStr(b.status)})`
+  )
+  .join(",\n");
+
+console.log("-- users --");
+console.log(userRows);
+console.log("-- ledger --");
+console.log(ledgerRows);
+console.log(`\nDN-2026 sealed root: ${dnTree.root}`);
+console.log(`Wrote ${join(outDir, "users-seed.ts")} and ledger-seed.ts`);
+
+// ---------------------------------------------------------------------------------------------
+// init_db.sql — schema + the same seed, so PostgreSQL and the in-memory fallback agree.
+// ---------------------------------------------------------------------------------------------
+const schema = `-- Bunon PostgreSQL schema + demo seed.
+-- AUTO-GENERATED by scripts/generate-seed.ts (npm run seed:generate). Do not edit by hand.
+-- Run: psql -U postgres -h localhost -c "CREATE DATABASE bunon_db;"   (once)
+--      psql -U postgres -h localhost -d bunon_db -f init_db.sql
+-- Re-running resets the ledger to the seeded genesis chain.
+
+CREATE TABLE IF NOT EXISTS bunon_users (
+  id               VARCHAR(64)  PRIMARY KEY,
+  email            VARCHAR(255) NOT NULL UNIQUE,
+  password_hash    VARCHAR(255) NOT NULL CHECK (password_hash LIKE 'scrypt$%'),
+  full_name        VARCHAR(255) NOT NULL,
+  organization     VARCHAR(255) NOT NULL,
+  role             VARCHAR(32)  NOT NULL CHECK (role IN ('factory', 'buyer')),
+  clearance_level  VARCHAR(64)  NOT NULL,
+  cluster_id       VARCHAR(64)  NOT NULL,
+  avatar_initial   VARCHAR(8)   NOT NULL,
+  created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS bunon_users_email_lower_idx ON bunon_users (LOWER(email));
+
+-- Append-only, hash-chained audit ledger. hash = sha256(canonical JSON of the block incl. prev_hash).
+DROP TABLE IF EXISTS bunon_audit_ledger;
+CREATE TABLE bunon_audit_ledger (
+  block         INTEGER      PRIMARY KEY,
+  id            VARCHAR(32)  NOT NULL UNIQUE,
+  time          TIMESTAMPTZ  NOT NULL,
+  type          VARCHAR(64)  NOT NULL,
+  actor         VARCHAR(255) NOT NULL,
+  summary       TEXT         NOT NULL,
+  style_code    VARCHAR(64),
+  payload_hash  CHAR(66),
+  prev_hash     CHAR(66)     NOT NULL,
+  hash          CHAR(66)     NOT NULL UNIQUE,
+  status        VARCHAR(16)  NOT NULL CHECK (status IN ('verified', 'flagged')),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX bunon_audit_ledger_style_idx ON bunon_audit_ledger (style_code, block DESC);
+
+CREATE OR REPLACE FUNCTION bunon_ledger_append_only() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'bunon_audit_ledger is append-only: % is not allowed', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER bunon_audit_ledger_no_update_delete
+  BEFORE UPDATE OR DELETE ON bunon_audit_ledger
+  FOR EACH ROW EXECUTE FUNCTION bunon_ledger_append_only();
+
+-- Demo users (password "${DEMO_PASSWORD}", scrypt-hashed)
+INSERT INTO bunon_users (id, email, password_hash, full_name, organization, role, clearance_level, cluster_id, avatar_initial)
+VALUES
+${userRows}
+ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash, full_name = EXCLUDED.full_name,
+  organization = EXCLUDED.organization, role = EXCLUDED.role, clearance_level = EXCLUDED.clearance_level,
+  cluster_id = EXCLUDED.cluster_id, avatar_initial = EXCLUDED.avatar_initial;
+
+-- Genesis ledger chain
+INSERT INTO bunon_audit_ledger (block, id, time, type, actor, summary, style_code, payload_hash, prev_hash, hash, status)
+VALUES
+${ledgerRows};
+`;
+writeFileSync(join(root, "init_db.sql"), schema);
+console.log(`Wrote ${join(root, "init_db.sql")}`);

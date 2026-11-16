@@ -1,0 +1,8 @@
+# never upload local secrets or bulky research material
+.env
+.env*.local
+research_notes
+reports
+CLOUDCAMP_BD_CONTEXT.md
+.agents
+tests
