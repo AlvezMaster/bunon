@@ -19,7 +19,7 @@ Bunon **checks documents; it does not certify factories.**
 | Certificate registry | **Simulated** (`src/lib/certificate-registry.ts`), labelled "Simulated registry" on screen. |
 | Buyer questionnaires | Written for this demo in the style of common social-audit topics (`src/lib/questionnaire.ts`). |
 | Questionnaire drafting, quote checks, ledger, access rules, sign-up, invites, unlink, export | **Real and working** in the code and on the live site. |
-| AI model | **Real**, but it runs on the factory's own computer (see below). The live website has no AI; it uses rules instead and says so on screen. |
+| AI model | **Real.** On a factory's own computer (and in our live demo on the day): Qwen 3.5 4B through Ollama, fully local. On the public website, which can't reach anyone's computer: Qwen 3.8 (27B) on Cloudflare Workers AI, working only on the fictional demo documents, and labelled as such on screen. |
 | Factory sign-up details (trade licence, BIN, ERC, DIFE) | **Self-declared.** Bunon checks the format only and shows them to buyers as "not checked by Bunon". |
 
 ## How it works
@@ -45,19 +45,21 @@ draft answer with quote ───────────▶        /api/questio
 
 ## Responsible AI
 
-- **Local model.** Qwen 3.5 4B runs through Ollama on the factory's computer, so documents do not leave the factory for drafting. In production this would run on Bunon-managed servers or the factory's hardware; the hosted demo has no model and uses rules.
+- **Local model first.** Qwen 3.5 4B runs through Ollama on the factory's computer, so documents do not leave the factory for drafting.
+- **Online demo model.** The public website uses the same model family, Qwen, hosted on Cloudflare Workers AI, only on fictional documents. Cloudflare states it does not train on content sent to Workers AI. Drafts are cached for a week to stay within the free daily allowance; if the allowance runs out, the site falls back to rules.
 - **Human in the loop.** The model only drafts. A person approves, edits or writes every answer.
 - **Grounded answers only.** An answer must quote its source sentence; the quote is checked against the document on the server, including after a person edits the answer.
 - **Two models must agree** (language model and decision model) before a draft is offered; disagreements go to a person.
 - **Honest labelling.** Simulated data, self-declared profiles and "no AI on this website" are stated on screen.
 - **Limits.** The test set is small (13 questions); the decision model's score is optimistic because its training examples were added after the first run. Bangla screen text uses a fixed, reviewed dictionary (not machine translation); a native-speaker review is still pending.
 
-### Evaluation (`npm run eval:qa`, local, 13 questions)
+### Evaluation (13 labelled questions; local runs with `npm run eval:qa`, the online model through the same checks on a preview deployment)
 
 | Model | Correct cited answers | Wrong drafts kept | Left for a person (should be) | Avg time |
 |---|---|---|---|---|
 | qwen3.5:4b | 8 / 10 | 0 | 3 / 3 | 2.7 s |
 | qwen3:4b-instruct | 8 / 10 | 0 | 3 / 3 | 2.4 s |
+| qwen3.8-27b (Cloudflare Workers AI, online demo) | 9 / 10 | 0 | 3 / 3 | about 2.5 s typical, occasionally 10 s+ |
 
 Certificate reading with qwen3.5:4b takes about 3.4 s per document (valid → verified, expired → flagged, tampered → flagged).
 
@@ -89,12 +91,12 @@ npm test             # unit tests
 npm run eval:qa      # questionnaire accuracy test (needs Ollama with qwen3.5:4b)
 ```
 
-Settings (see `.env.example`): `BUNON_SESSION_SECRET`; `BUNON_DATA_SOURCE` (`auto`, `memory`, `postgres` or `d1`); for D1: `D1_ACCOUNT_ID`, `D1_DATABASE_ID`, `D1_API_TOKEN`; `CRON_SECRET`; `OLLAMA_BASE_URL`. Create the D1 tables with `npx wrangler d1 execute bunon --remote --file db/d1-schema.sql`.
+Settings (see `.env.example`): `BUNON_SESSION_SECRET`; `BUNON_DATA_SOURCE` (`auto`, `memory`, `postgres` or `d1`); for D1: `D1_ACCOUNT_ID`, `D1_DATABASE_ID`, `D1_API_TOKEN`; `CRON_SECRET`; `OLLAMA_BASE_URL`. For the hosted model: `AI_PROVIDER=workers-ai` and optionally `WORKERS_AI_MODEL` (the token also needs Workers AI access). Leave `AI_PROVIDER` unset to use Ollama on the same computer. Create the D1 tables with `npx wrangler d1 execute bunon --remote --file db/d1-schema.sql`.
 
 ## Tools we used (disclosure)
 
 - **Claude Code (Anthropic)** as an AI coding assistant for design, code and reviews.
-- **Qwen 3.5 4B via Ollama** for certificate reading and answer drafting (prompt in `src/lib/server/questionnaire-ai.ts`).
+- **Qwen 3.5 4B via Ollama** for certificate reading and answer drafting on a local computer, and **Qwen 3.8 27B on Cloudflare Workers AI** for the public demo (prompts in `src/lib/server/questionnaire-ai.ts` and `src/lib/server/ollama.ts`).
 - **MCP:** Bunon exposes a small MCP endpoint at `/api/mcp` serving the demo catalog.
 - Hosting: **Vercel**; database: **Cloudflare D1**; framework: Next.js 16, React 19, TypeScript, Tailwind CSS.
 

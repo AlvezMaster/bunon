@@ -423,7 +423,11 @@ export default function DocumentIngestionEngine({ isOpen, onClose, styleCode, ti
               </dd>
               <dt className="text-ink-muted">Extraction</dt>
               <dd className="text-ink">
-                {result.engine === "ollama" ? `Local model ${result.model ?? "(unnamed)"}` : "Rules engine"}
+                {result.engine === "ollama"
+                  ? (result.model ?? "").startsWith("@cf/")
+                    ? `Cloud model ${result.model} (Cloudflare Workers AI, demo)`
+                    : `Local model ${result.model ?? "(unnamed)"}`
+                  : "Rules engine"}
                 <span className="text-ink-muted tabular-nums"> · {result.timings.totalMs}&nbsp;ms</span>
               </dd>
               {result.engine === "ollama" && (

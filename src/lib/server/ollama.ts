@@ -10,6 +10,7 @@
  */
 import type { ExtractedCertificate } from "../extraction.ts";
 import { parseDateToIso } from "../extraction.ts";
+import { workersAiJson, workersAiModel } from "./workers-ai.ts";
 
 export interface OllamaStatus {
   available: boolean;
@@ -40,6 +41,9 @@ export function pickModel(installed: string[], preferred: string | undefined | n
 
 export async function getOllamaStatus(force = false): Promise<OllamaStatus> {
   const now = Date.now();
+  // Online, the model is Qwen on Cloudflare Workers AI (a computer's local Ollama isn't reachable).
+  const cloud = workersAiModel();
+  if (cloud) return { available: true, baseUrl: "workers-ai", model: cloud, models: [cloud], error: null, checkedAt: now };
   if (!force && statusCache && now - statusCache.checkedAt < STATUS_TTL_MS) return statusCache;
   const baseUrl = getOllamaBaseUrl();
   try {
@@ -96,6 +100,19 @@ export class OllamaUnavailableError extends Error {
   }
 }
 
+function toExtracted(parsed: Record<string, unknown>): ExtractedCertificate {
+  const str = (k: string) => (typeof parsed[k] === "string" ? (parsed[k] as string).trim() : "");
+  return {
+    issuer: str("issuer"),
+    standard: str("standard"),
+    certificateNumber: str("certificate_number").replace(/\s+/g, ""),
+    licensee: str("licensee"),
+    scope: str("scope"),
+    validFrom: parseDateToIso(str("valid_from")) ?? str("valid_from"),
+    validUntil: parseDateToIso(str("valid_until")) ?? str("valid_until"),
+  };
+}
+
 export async function extractCertificateWithOllama(
   text: string,
   options: { model?: string; timeoutMs?: number } = {}
@@ -106,6 +123,10 @@ export async function extractCertificateWithOllama(
 
   const clipped = text.length > 12_000 ? `${text.slice(0, 12_000)}\n[... truncated ...]` : text;
   const started = Date.now();
+  if (status.baseUrl === "workers-ai") {
+    const reply = await workersAiJson(SYSTEM_PROMPT, `CERTIFICATE TEXT:\n"""\n${clipped}\n"""`, EXTRACTION_SCHEMA, options.timeoutMs ?? 60_000);
+    return { extracted: toExtracted(JSON.parse(reply.content) as Record<string, unknown>), model, durationMs: Date.now() - started, promptTokens: reply.promptTokens, completionTokens: reply.completionTokens };
+  }
   const res = await fetch(`${status.baseUrl}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -137,18 +158,8 @@ export async function extractCertificateWithOllama(
   } catch {
     throw new Error("Ollama returned non-JSON content");
   }
-  const str = (k: string) => (typeof parsed[k] === "string" ? (parsed[k] as string).trim() : "");
-  const extracted: ExtractedCertificate = {
-    issuer: str("issuer"),
-    standard: str("standard"),
-    certificateNumber: str("certificate_number").replace(/\s+/g, ""),
-    licensee: str("licensee"),
-    scope: str("scope"),
-    validFrom: parseDateToIso(str("valid_from")) ?? str("valid_from"),
-    validUntil: parseDateToIso(str("valid_until")) ?? str("valid_until"),
-  };
   return {
-    extracted,
+    extracted: toExtracted(parsed),
     model,
     durationMs: Date.now() - started,
     promptTokens: json.prompt_eval_count ?? null,

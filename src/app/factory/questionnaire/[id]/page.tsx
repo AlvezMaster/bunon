@@ -148,6 +148,15 @@ export default function FactoryQuestionnaire() {
                   {t("You are no longer linked with")} {buyer}. {t("These answers are read-only. Download them from the Buyers page while the 30-day window lasts.")}
                 </span>
               </p>
+            ) : ai && (data.model ?? "").startsWith("@cf/") ? (
+              <p role="note" className="flex items-start gap-2 rounded-lg border border-line bg-surface-2/70 px-4 py-3 text-sm text-ink-muted">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <span>
+                  <strong className="text-ink">{t("Online demo: cloud AI on fictional documents.")}</strong>{" "}
+                  {t("Drafts come from Qwen on Cloudflare Workers AI, which does not train on what it is sent. Real factories run Qwen on their own computer. Nothing reaches")}{" "}
+                  {buyer} {t("until you press Send.")}
+                </span>
+              </p>
             ) : ai ? (
               <p className="-mt-2 max-w-[65ch] text-sm text-ink-muted">
                 {`${t("AI drafts each answer from your documents and quotes the sentence it used. Nothing reaches")} ${buyer} ${t("until you press Send.")}`}

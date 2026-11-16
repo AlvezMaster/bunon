@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
           validThrough: entry.validUntil,
           documentSha256: result.documentSha256,
           ingestedAt: new Date().toISOString(),
-          engine: result.engine === "ollama" ? `ollama:${result.model}` : "rules",
+          engine: result.engine === "ollama" ? `${(result.model ?? "").startsWith("@cf/") ? "workers-ai" : "ollama"}:${result.model}` : "rules",
         }
       : null;
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
   } else {
     try {
       const scope = await scopeFor(session);
-      const engineLabel = result.engine === "ollama" ? `local model ${result.model}` : "rules engine";
+      const engineLabel = result.engine === "ollama" ? ((result.model ?? "").startsWith("@cf/") ? `Qwen on Cloudflare Workers AI (${result.model})` : `local model ${result.model}`) : "rules engine";
       const { block, source } = await appendLedgerBlock({
         type: "CERT INGESTION",
         actor: `${scope.orgNameOf(scope.orgId)} via ${engineLabel}`,

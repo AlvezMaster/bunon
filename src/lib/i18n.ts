@@ -155,6 +155,8 @@ const BN: Record<string, string> = {
   "Add between 1 and 60 questions.": "১ থেকে ৬০টি প্রশ্ন যোগ করুন।",
   "You can only send questionnaires to factories you are linked to.": "আপনি শুধু সংযুক্ত কারখানায় প্রশ্নপত্র পাঠাতে পারেন।",
   // Honest AI wording, unlink states
+  "Online demo: cloud AI on fictional documents.": "অনলাইন ডেমো: কাল্পনিক নথিতে ক্লাউড এআই।",
+  "Drafts come from Qwen on Cloudflare Workers AI, which does not train on what it is sent. Real factories run Qwen on their own computer. Nothing reaches": "খসড়া আসে ক্লাউডফ্লেয়ার ওয়ার্কার্স এআই-এর কিউয়েন থেকে, যা পাঠানো তথ্য দিয়ে প্রশিক্ষণ দেয় না। আসল কারখানা কিউয়েন নিজের কম্পিউটারে চালায়। কিছুই পৌঁছায় না",
   "Suggest all from documents": "নথি থেকে সব প্রস্তাব করুন",
   "Suggest from documents": "নথি থেকে প্রস্তাব করুন",
   "You are no longer linked with": "আপনি আর সংযুক্ত নন:",
