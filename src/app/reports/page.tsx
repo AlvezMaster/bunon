@@ -110,7 +110,7 @@ export default function ReportsPage() {
                 <li key={p.code}>
                   <Link
                     href={`/passport/${encodeURIComponent(p.code)}`}
-                    className="flex min-h-[64px] items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-2/60 sm:px-5"
+                    className="row-link !m-0 !w-full !rounded-none min-h-[64px] focus-visible:[outline-offset:-2px] px-4 py-3 sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
                       <h2 className="text-base font-semibold leading-snug text-ink">{p.title}</h2>
@@ -120,7 +120,7 @@ export default function ReportsPage() {
                     </div>
                     <StatusBadge tone={c.cleared ? "ok" : "bad"}>{c.cleared ? t("In date") : t("On hold")}</StatusBadge>
                     <span className="sr-only">{t("Open report")}</span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                    <ArrowRight className="row-chevron h-5 w-5" aria-hidden="true" />
                   </Link>
                 </li>
               );

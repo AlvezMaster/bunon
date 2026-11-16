@@ -39,6 +39,12 @@ export default function AuditLogsPage() {
   }, [load]);
 
   const blocks = snapshot?.blocks ?? [];
+
+  // Links like /ledger#block-1421 (from dashboards) land on that entry once the chain has loaded.
+  useEffect(() => {
+    if (!blocks.length || !window.location.hash.startsWith("#block-")) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
+  }, [blocks.length]);
   const verification = snapshot?.verification;
 
   const handleCopy = async (hash: string) => {
@@ -175,7 +181,7 @@ export default function AuditLogsPage() {
                 </tr>
               )}
               {blocks.map((b) => (
-                <tr key={b.block} className="hover:bg-surface-2/40 transition-colors bg-canvas/40 align-top">
+                <tr key={b.block} id={`block-${b.block}`} className="scroll-mt-24 bg-canvas/40 align-top transition-colors hover:bg-surface-2/40 target:bg-brand-soft/70">
                   <td className="py-3 px-4 font-mono text-xs font-bold text-ink tabular-nums">#{b.block}</td>
                   <td className="py-3 px-4 font-mono text-xs text-ink-muted whitespace-nowrap tabular-nums">
                     {b.time.slice(0, 10)} {formatBlockTime(b.time)}

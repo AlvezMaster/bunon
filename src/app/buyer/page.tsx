@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Factory, MessageSquareText, ShieldAlert, ShieldCheck, Search } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
-import { DashboardHeader, Panel, RecentActivity, StatCard, StatusBadge } from "@/components/dashboard/DashboardParts";
+import { DashboardHeader, NextSteps, Panel, RecentActivity, RowLink, StatusBadge, type NextStep } from "@/components/dashboard/DashboardParts";
+import { useQuestionnaires } from "@/components/questions/shared";
 import { useBunonStore } from "@/lib/store";
 import { factoryOf, listStyles, styleClearance, visibleOrders } from "@/lib/styles";
 import { t } from "@/lib/i18n";
@@ -14,6 +14,8 @@ export default function BuyerDashboard() {
   const visibleCodes = useBunonStore((s) => s.visibleCodes);
   const customStyles = useBunonStore((s) => s.customStyles);
   const renewals = useBunonStore((s) => s.renewals);
+  const partners = useBunonStore((s) => s.partners);
+  const { data: questions } = useQuestionnaires();
 
   const orders = visibleOrders(listStyles(customStyles, renewals), session, visibleCodes);
   const suppliers = [...new Set(orders.map(factoryOf))].map((name) => {
@@ -21,47 +23,46 @@ export default function BuyerDashboard() {
     return { name, orders: own.length, held: own.filter((o) => !styleClearance(o).cleared).length };
   });
   const held = suppliers.reduce((n, s) => n + s.held, 0);
+  const answered = questions ? questions.questionnaires.reduce((n, q) => n + q.questions.filter((x) => questions.answers[x.id]).length, 0) : undefined;
+  const factories = partners.filter((p) => p.status === "active" || p.status === "unlink_pending").length;
+
+  // The four jobs a buyer comes here for. Orders on hold come first when there are any.
+  const steps: NextStep[] = [
+    held
+      ? { href: "/reports", Icon: ShieldAlert, title: "Orders on hold", note: "A supplier certificate has expired", count: held, primary: true }
+      : { href: "/reports", Icon: ShieldCheck, title: "Your orders", note: "All certificates in date", count: orders.length },
+    { href: "/buyer/questions", Icon: MessageSquareText, title: "Read answers", note: "Each one shows its source sentence", count: answered, primary: !held && !!answered },
+    { href: "/buyer/verify", Icon: Search, title: "Verify a supplier", note: "Check any order step by step" },
+    { href: "/buyer/factories", Icon: Factory, title: "Your factories", note: "Linked suppliers and invites", count: factories },
+  ];
 
   return (
     <div className="min-h-screen pb-24">
       <Navbar />
       <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pt-10 sm:px-6">
         <DashboardHeader eyebrow="Buyer dashboard" title={session?.organization ?? "Your suppliers"}>
-          <div className="flex flex-wrap items-center gap-3">
-            <DemoDataBadge />
-            <Link href="/buyer/verify" className="btn-primary-action">
-              {t("Verify a supplier")}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
+          <DemoDataBadge />
         </DashboardHeader>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard label="Supplier factories" value={suppliers.length} />
-          <StatCard label="Open orders" value={orders.length} />
-          <StatCard label="Orders on hold" value={held} note="A supplier certificate has expired" tone={held ? "bad" : undefined} />
-        </div>
+        <NextSteps steps={steps} />
 
         <div className="grid gap-8 lg:grid-cols-2">
           <Panel title="Your suppliers">
             <ul className="divide-y divide-line">
               {suppliers.map((s) => (
-                <li key={s.name} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink">{s.name}</p>
-                    <p className="text-sm text-ink-muted tabular-nums">
-                      {s.orders} {t(s.orders === 1 ? "order" : "orders")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <StatusBadge tone={s.held ? "bad" : "ok"}>{s.held ? `${s.held} ${t("on hold")}` : t("All in date")}</StatusBadge>
-                    <Link
-                      href={`/buyer/verify?factory=${encodeURIComponent(s.name)}`}
-                      className="btn-tactile-hollow inline-flex min-h-[44px] items-center px-4 text-sm font-semibold"
-                    >
-                      {t("Verify")}
-                    </Link>
-                  </div>
+                <li key={s.name}>
+                  <RowLink href={`/buyer/verify?factory=${encodeURIComponent(s.name)}`} label={`${t("Verify")} ${s.name}`}>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-ink">{s.name}</span>
+                      <span className="block text-sm text-ink-muted tabular-nums">
+                        {s.orders} {t(s.orders === 1 ? "order" : "orders")}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <StatusBadge tone={s.held ? "bad" : "ok"}>{s.held ? `${s.held} ${t("on hold")}` : t("All in date")}</StatusBadge>
+                      <span className="text-sm font-semibold text-brand">{t("Verify")}</span>
+                    </span>
+                  </RowLink>
                 </li>
               ))}
             </ul>

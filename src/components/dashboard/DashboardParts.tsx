@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { CircleAlert, CircleCheck, CircleX, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleAlert, CircleCheck, CircleX, type LucideIcon } from "lucide-react";
 import { fetchLedger, type LedgerSnapshot } from "@/lib/ledger-client";
 import { t } from "@/lib/i18n";
 import { eventLabel } from "@/lib/labels";
@@ -23,14 +23,94 @@ export function StatusBadge({ tone, children }: { tone: Tone; children: React.Re
   );
 }
 
-export function StatCard({ label, value, note, tone }: { label: string; value: React.ReactNode; note?: string; tone?: Tone }) {
+/** A number with a label. With `href`, the whole card opens the list behind the number. */
+export function StatCard({ label, value, note, tone, href }: { label: string; value: React.ReactNode; note?: string; tone?: Tone; href?: string }) {
   const color = tone === "bad" ? "text-danger" : tone === "review" ? "text-warning" : "text-ink";
+  const body = (
+    <>
+      <p className="flex items-center justify-between gap-2 text-sm text-ink-muted">
+        {t(label)}
+        {href && <ArrowRight className="tile-arrow h-4 w-4" aria-hidden="true" />}
+      </p>
+      <p className={`font-display text-3xl font-bold tabular-nums ${color}`}>{value}</p>
+      {note && <p className="text-sm text-ink-faint">{t(note)}</p>}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="glass-card tile-link !min-h-0 !gap-2 p-5">
+      {body}
+    </Link>
+  ) : (
+    <div className="glass-card flex flex-col gap-2 p-5">{body}</div>
+  );
+}
+
+export interface NextStep {
+  href: string;
+  Icon: LucideIcon;
+  title: string;
+  /** One short line under the title. */
+  note: string;
+  /** A number to show in a pill (e.g. how many are waiting). Hidden when undefined. */
+  count?: number;
+  /** The one most urgent step gets the accent colour. */
+  primary?: boolean;
+}
+
+/** "What to do next": big tiles, each one a single click to the right screen. */
+export function NextSteps({ steps }: { steps: NextStep[] }) {
   return (
-    <div className="glass-card p-5">
-      <p className="text-sm text-ink-muted">{t(label)}</p>
-      <p className={`mt-2 font-display text-3xl font-bold tabular-nums ${color}`}>{value}</p>
-      {note && <p className="mt-1 text-sm text-ink-faint">{t(note)}</p>}
-    </div>
+    <section aria-labelledby="next-steps-title" className="space-y-3">
+      <h2 id="next-steps-title" className="section-index">
+        {t("What to do next")}
+      </h2>
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map(({ href, Icon, title, note, count, primary }) => (
+          <li key={href + title} className="flex">
+            <Link href={href} data-primary={primary ? "true" : undefined} className="glass-card tile-link flex-1">
+              <span className="flex items-center justify-between gap-2">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                {count !== undefined && (
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${
+                      primary ? "bg-white/20 text-white" : "bg-ink/[0.07] text-ink dark:bg-white/[0.08]"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </span>
+              <span className="mt-auto space-y-1">
+                <span className="flex items-center justify-between gap-2 font-semibold">
+                  {t(title)}
+                  <ArrowRight className="tile-arrow h-4 w-4 shrink-0" aria-hidden="true" />
+                </span>
+                <span className="tile-muted block text-sm text-ink-muted">{t(note)}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** A list row that is one big link or button, with a chevron that says "this opens". */
+export function RowLink({ href, onClick, children, label }: { href?: string; onClick?: () => void; children: React.ReactNode; label?: string }) {
+  const inner = (
+    <>
+      <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">{children}</span>
+      <ChevronRight className="row-chevron h-5 w-5" aria-hidden="true" />
+    </>
+  );
+  return href ? (
+    <Link href={href} className="row-link" aria-label={label}>
+      {inner}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className="row-link" aria-label={label}>
+      {inner}
+    </button>
   );
 }
 
@@ -83,8 +163,9 @@ export function DashboardHeader({
     <Panel
       title="Recent activity"
       action={
-        <Link href="/ledger" className="text-sm font-semibold text-brand hover:underline">
+        <Link href="/ledger" className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand hover:underline">
           {t("Full ledger")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       }
     >
@@ -97,12 +178,16 @@ export function DashboardHeader({
       ) : (
         <ul className="divide-y divide-line">
           {blocks.map((b) => (
-            <li key={b.block} className="flex items-start justify-between gap-4 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">{t(eventLabel(b.type))}</p>
-                <p className="line-clamp-2 text-sm text-ink-muted">{b.summary}</p>
-              </div>
-              <span className="shrink-0 font-mono text-xs tabular-nums text-ink-faint">{b.time.slice(0, 10)}</span>
+            <li key={b.block}>
+              <RowLink href={`/ledger#block-${b.block}`}>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-ink">{t(eventLabel(b.type))}</span>
+                  <span className="line-clamp-2 text-sm text-ink-muted">{b.summary}</span>
+                </span>
+                <span className="shrink-0 font-mono text-xs tabular-nums text-ink-faint">
+                  #{b.block} · {b.time.slice(0, 10)}
+                </span>
+              </RowLink>
             </li>
           ))}
         </ul>

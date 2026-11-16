@@ -57,7 +57,7 @@ export default function FactoryOrdersPage() {
                   <button
                     type="button"
                     onClick={() => open(o.code)}
-                    className="flex min-h-[64px] w-full items-center gap-4 px-5 py-3 text-left transition-colors duration-150 hover:bg-surface-2"
+                    className="row-link !m-0 !w-full !rounded-none min-h-[64px] focus-visible:[outline-offset:-2px] px-5 py-3"
                   >
                     <span className="w-20 shrink-0 font-mono text-sm tabular-nums text-ink-muted">#{o.code}</span>
                     <span className="min-w-0 flex-1">
@@ -67,7 +67,7 @@ export default function FactoryOrdersPage() {
                       </span>
                     </span>
                     <StatusBadge tone={held ? "bad" : "ok"}>{held ? "On hold" : "Ready"}</StatusBadge>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden="true" />
+                    <ChevronRight className="row-chevron h-5 w-5" aria-hidden="true" />
                   </button>
                 </li>
               );
