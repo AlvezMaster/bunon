@@ -132,7 +132,7 @@ export const SEGMENTS: Segment[] = [
     lines: [
       {
         text: "Drafts are personal: hybrid search covers only that factory's documents, in English and Bangla.",
-        visual: { kind: "shot", src: "shots/documents-search.png", url: "bunon-ten.vercel.app/factory/documents", role: "Factory", focus: [0.215, 0.24, 0.565, 0.51], zoom: "in" },
+        visual: { kind: "shot", src: "shots/documents-search.png", url: "bunon-ten.vercel.app/factory/documents", role: "Factory", focus: [0.215, 0.24, 0.565, 0.53], zoom: "in" },
       },
       { text: "Qwen drafts the answer: on the factory's own computer, or on Cloudflare for our online demo.", visual: { kind: "models" } },
       { text: "Then the checks: the quote must exist word for word, and a second model must agree.", visual: { kind: "checks" } },
