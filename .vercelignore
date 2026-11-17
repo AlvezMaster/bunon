@@ -8,3 +8,5 @@
 /CLOUDCAMP_BD_CONTEXT.md
 /.agents
 /tests
+# The demo video project has its own packages and is never part of the website.
+/video
