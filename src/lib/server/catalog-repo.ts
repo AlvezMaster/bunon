@@ -19,6 +19,8 @@ export interface ApprovedAnswer {
   approvedAt: string;
   ledgerBlock: number | null;
   aiDrafted: boolean;
+  /** Set when the factory reused its own earlier answer to this question id (shown to the factory only). */
+  reusedFrom?: string | null;
 }
 
 /** A question a buyer added to a questionnaire after sending it. */

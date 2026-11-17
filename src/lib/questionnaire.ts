@@ -6,6 +6,7 @@
  * the cited document, and a person approves every answer before it is sealed in the ledger.
  */
 import { FACTORY_DOCUMENTS, type FactoryDocument } from "./fixtures/factory-documents.ts";
+import { BANGLA_VALUE_QUESTION } from "./bangla-glossary.ts";
 
 export type QuestionCategory = "document_fact" | "calculation" | "policy_exists" | "needs_person";
 export type AnswerKind = "yes" | "no" | "value" | "unknown";
@@ -288,7 +289,7 @@ export function decideCategory(question: string): Decision {
 
 const answerable = (c: QuestionCategory) => c === "document_fact" || c === "policy_exists";
 const NEGATION = /\b(not|never|no one|nobody|none|cannot|without)\b|n't\b/i;
-const VALUE_QUESTION = /^\s*(when|what|which|how|who|where)\b/i;
+const VALUE_QUESTION = { test: (q: string) => /^\s*(when|what|which|how|who|where)\b/i.test(q) || BANGLA_VALUE_QUESTION.test(q) };
 
 export interface ModelDraft {
   category: QuestionCategory;

@@ -40,8 +40,9 @@ draft answer with quote ───────────▶        /api/questio
    - a separate Naive Bayes decision model must agree that the question is answerable from a document;
    - a "Yes" may not rest on a negative sentence, and a "when / how many" question needs a value, not just "Yes".
    Anything that fails goes to a person. Nothing reaches the buyer until a person presses Send.
-3. **Ledger.** Every check, approval and link event is a block in a SHA-256 hash chain. The database refuses to edit or delete blocks. Blocks hold company ids and fingerprints, not answer text, so shared answers can be deleted later while the proof stays.
-4. **Accounts and links.** Buyers sign up with email and passphrase; factories add a self-declared profile. A factory invites a buyer with a single-use link (7 days). Either side can unlink alone; nothing changes for 12 hours (undo window), then both can download a ZIP of the shared data for 30 days, after which shared answers are deleted.
+3. **Answer memory (answer every buyer once).** When a second buyer asks something the factory already answered for another buyer, the earlier approved answer is filled in, with its quote and source. A small question graph links every question to compliance topics (fire safety, wages, child labour, … in English and Bangla). An answer is reused only when both questions share a topic, ask the same kind of thing (yes/no or a value), agree on negatives, numbers and time periods, and are worded alike (shared words, or meaning through embeddings plus some shared words). The quoted sentence must still be in the factory's documents, only the factory's own answers are used, and a person still checks and sends each one. Buyers never see that an answer was reused or for whom. Rules and tests: `src/lib/answer-reuse.ts`, `tests/answer-reuse.test.ts`.
+4. **Ledger.** Every check, approval and link event is a block in a SHA-256 hash chain. The database refuses to edit or delete blocks. Blocks hold company ids and fingerprints, not answer text, so shared answers can be deleted later while the proof stays.
+5. **Accounts and links.** Buyers sign up with email and passphrase; factories add a self-declared profile. A factory invites a buyer with a single-use link (7 days). Either side can unlink alone; nothing changes for 12 hours (undo window), then both can download a ZIP of the shared data for 30 days, after which shared answers are deleted.
 
 ## Responsible AI
 
@@ -50,6 +51,8 @@ draft answer with quote ───────────▶        /api/questio
 - **Human in the loop.** The model only drafts. A person approves, edits or writes every answer.
 - **Grounded answers only.** An answer must quote its source sentence; the quote is checked against the document on the server, including after a person edits the answer.
 - **Two models must agree** (language model and decision model) before a draft is offered; disagreements go to a person.
+- **Personal data never reaches the cloud model.** Before any call to Cloudflare (drafting or search vectors), names after a title or "Name:" label, phone numbers, email addresses and 10–17 digit ID or account numbers are replaced with placeholders such as `[PHONE_1]`; Bunon puts the real values back in the reply on its own server, so quotes still check word for word (`src/lib/personal-data.ts`, `tests/personal-data.test.ts`). The local model needs no masking: nothing leaves the factory.
+- **Checked for language bias.** English and Bangla questions are measured side by side, and the gaps found were fixed (see "Language bias check" below).
 - **Honest labelling.** Simulated data, self-declared profiles and "no AI on this website" are stated on screen.
 - **Limits.** The test set is small (13 questions); the decision model's score is optimistic because its training examples were added after the first run. Bangla screen text uses a fixed, reviewed dictionary (not machine translation); a native-speaker review is still pending.
 
@@ -69,8 +72,36 @@ Does the right document come back? Keyword search runs with `node scripts/eval-r
 
 | Search | Right document first | Right document in the top 4 | Bangla questions (first / top 4) |
 |---|---|---|---|
-| Keywords only | 9 / 16 | 10 / 16 | 0 / 4 and 0 / 4 |
-| Keywords + meaning (Qwen3-Embedding 0.6B) | 13 / 16 | 16 / 16 | 3 / 4 and 4 / 4 |
+| Keywords only, before the Bangla glossary | 9 / 16 | 10 / 16 | 0 / 4 and 0 / 4 |
+| Keywords only, with the Bangla glossary | 13 / 16 | 14 / 16 | 4 / 4 and 4 / 4 |
+| Keywords + meaning (Qwen3-Embedding 0.6B; measured before the glossary) | 13 / 16 | 16 / 16 | 3 / 4 and 4 / 4 |
+
+### Language bias check (`scripts/eval-bias.ts`, `scripts/bias-questions.ts`)
+
+The same questions in English and in Bangla, on a factory's own computer (keyword search, no embedding model, local qwen3.5:4b). The check found two gaps, both now fixed:
+
+1. **Bangla questions could not find English documents offline** (0 of 12). Fix: a reviewed glossary of compliance terms adds English search words to a Bangla question, and Bangla digits are read as numbers (`src/lib/bangla-glossary.ts`). Because the glossary was written alongside the first 12 questions, we also wrote 8 held-out pairs afterwards and did not change the glossary after seeing their results.
+2. **The "a 'when / how many' question needs a value, not just Yes" rule only knew English question words**, so one Bangla "when" question kept a bare "Yes". Fix: Bangla question words (কবে, কত, কী, কোন …; not the yes/no particle কি, and not কোনো "any").
+
+| Check | English | Bangla |
+|---|---|---|
+| Search, 12 reworded pairs, right document in the top 4 (before the fix) | 10 / 12 | 0 / 12 |
+| Search, 12 reworded pairs, after the fix | 10 / 12 | 12 / 12 |
+| Search, 8 held-out pairs, after the fix (the honest number) | 6 / 8 | 7 / 8 |
+| Drafting, 13 labelled questions, before the fix: correct cited answers · wrong drafts kept | 8 / 10 · 0 | 8 / 10 · 1 |
+| Drafting, after the fix: correct cited answers · wrong drafts kept · left for a person (should be) | 8 / 10 · 0 · 3 / 3 | 8 / 10 · 0 · 3 / 3 |
+
+A small labelled sample on synthetic documents: it shows whether one language is served worse, not how good the system is overall.
+
+### Answer reuse (`scripts/eval-reuse.ts`, `scripts/reuse-questions.ts`)
+
+Buyer A's 20 questions are answered. Buyers B and C then ask 40 questions in their own words: 24 repeat one of A's questions, 16 look similar but ask something else (another number, period, detail or kind of answer). Words-only matching, as on a factory computer without an embedding model:
+
+| Repeated questions found | Different questions correctly left alone | Wrong suggestions |
+|---|---|---|
+| 18 / 24 (75%) | 16 / 16 | 0 of 18 |
+
+The 6 misses use different words for the same thing ("employees" and "statutory" for "workers" and "legal", "women" for "female"); those questions are simply drafted from the documents as usual. A wrong suggestion is the costly mistake, so the rules prefer missing a repeat; a person checks every suggestion anyway. The test set was written by us, not taken from real buyers. `tests/answer-reuse.test.ts` fails if a wrong suggestion ever appears.
 
 ### How documents are handled
 
@@ -92,6 +123,7 @@ The whole interface switches between English and Bangla (বাংলা) with o
 - Passwords: scrypt. Sessions: HMAC-signed, httpOnly cookie, 8 hours; the deployment refuses to start without its secret.
 - Every API filters on the server by company and link (`src/lib/server/access.ts`).
 - Ledger entries are append-only in the database itself (`db/d1-schema.sql`).
+- Personal data is masked before any text goes to the cloud AI model and restored only on Bunon's server (`src/lib/personal-data.ts`).
 - Unlink → 30-day export → deletion of shared answers (`src/lib/server/lifecycle.ts`, daily cron in `vercel.json`).
 - Designed with GDPR and Bangladesh's personal-data rules in mind; we do not claim compliance.
 

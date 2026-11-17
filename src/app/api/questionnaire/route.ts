@@ -12,6 +12,7 @@ import { getOllamaStatus } from "@/lib/server/ollama";
 import { quoteIsInDocument } from "@/lib/questionnaire";
 import { FACTORY_DOCUMENTS } from "@/lib/fixtures/factory-documents";
 import { listDocuments, loadCorpus } from "@/lib/server/documents-repo";
+import { reuseSuggestions } from "@/lib/server/answer-memory";
 import { canonicalJson, sha256Hex } from "@/lib/crypto";
 import { partnerOf, acceptsNewQuestions } from "@/lib/links";
 
@@ -72,7 +73,20 @@ export async function GET(req: NextRequest) {
         : docsVisible
           ? FACTORY_DOCUMENTS.map(({ id, title, fileName }) => ({ id, title, fileName }))
           : [],
-    answers: Object.fromEntries(Object.entries(state.answers ?? {}).filter(([id]) => ids.has(id))),
+    // Which earlier buyer an answer was reused from is the factory's business, never another buyer's.
+    answers: Object.fromEntries(
+      Object.entries(state.answers ?? {})
+        .filter(([id]) => ids.has(id))
+        .map(([id, a]) => [id, session.role === "factory" ? a : { ...a, reusedFrom: undefined }])
+    ),
+    // Factory only: unanswered questions that an answer it already sent to another buyer also answers.
+    reuse:
+      session.role === "factory"
+        ? await reuseSuggestions({ factoryOrgId: scope.orgId, questionnaires, answers: state.answers ?? {}, docs: (await loadCorpus(scope.orgId)).docs }).catch((error) => {
+            console.warn("[bunon/questionnaire] answer memory unavailable:", (error as Error).message);
+            return {};
+          })
+        : {},
     model: session.role === "factory" && ollama.available ? qaModel : null,
   });
 }
@@ -81,7 +95,7 @@ type Body =
   | { action: "create"; title: string; dueOn?: string; questions: string[]; factoryOrgIds: string[] }
   | { action: "ask"; groupId?: string; questionnaireId?: string; text: string }
   | { action: "draft"; questionId: string }
-  | { action: "approve"; questionId: string; answer: string; quote?: string; docId?: string | null; aiDrafted?: boolean };
+  | { action: "approve"; questionId: string; answer: string; quote?: string; docId?: string | null; aiDrafted?: boolean; reusedFrom?: string };
 
 const cleanQuestion = (t: unknown) => (typeof t === "string" ? t.trim().replace(/\s+/g, " ") : "");
 
@@ -177,18 +191,25 @@ export async function POST(req: NextRequest) {
     if (!answer || answer.length > 500) return fail("Write an answer (up to 500 characters).");
     // A cited quote must really be in the cited document, even after a person edits the answer.
     if (quote && (!docId || !quoteIsInDocument(quote, docId, docs))) return fail("The quoted sentence is not in the cited document.");
+    // A reused answer must come from this factory's own approved answer to a question in another questionnaire.
+    const reusedFrom =
+      typeof body.reusedFrom === "string" &&
+      state.answers[body.reusedFrom] &&
+      mine.some((q) => q.id !== qn.id && questionnaireParties(scope, q).factory === scope.orgId && q.questions.some((x) => x.id === body.reusedFrom))
+        ? body.reusedFrom
+        : null;
     const sealed = { questionId: question.id, answer, quote, docId };
     const { block } = await appendLedgerBlock({
       type: "ANSWER APPROVED",
       actor: scope.orgNameOf(scope.orgId),
       // Only a reference and a fingerprint: the answer itself lives in the deletable answer store.
-      summary: `Answer sent for question ${question.id} (${doc ? "cited a document" : "written by a person"}). The fingerprint seals the answer text.`,
+      summary: `Answer sent for question ${question.id} (${doc ? "cited a document" : "written by a person"}${reusedFrom ? "; reused an earlier approved answer" : ""}). The fingerprint seals the answer text.`,
       styleCode: null,
       payloadHash: await sha256Hex(canonicalJson(sealed)),
       status: "verified",
     });
     await recordBlockParties(block.block, [parties.factory, parties.buyer]);
-    const saved = { ...sealed, docTitle: doc?.title ?? null, approvedBy: guard.session.name, approvedAt: new Date().toISOString(), ledgerBlock: block.block, aiDrafted: body.aiDrafted === true };
+    const saved = { ...sealed, docTitle: doc?.title ?? null, approvedBy: guard.session.name, approvedAt: new Date().toISOString(), ledgerBlock: block.block, aiDrafted: body.aiDrafted === true, reusedFrom };
     await saveAnswer(saved);
     return NextResponse.json({ approved: saved });
   }

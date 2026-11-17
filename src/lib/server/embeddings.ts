@@ -6,6 +6,7 @@
  */
 import { getOllamaBaseUrl, getOllamaStatus } from "./ollama.ts";
 import { workersAiModel } from "./workers-ai.ts";
+import { createMasker } from "../personal-data.ts";
 
 const QUERY_INSTRUCTION = "Given a buyer's compliance question, retrieve passages from factory documents that answer it";
 
@@ -31,7 +32,8 @@ async function cloudEmbed(kind: "documents" | "queries", texts: string[]): Promi
   if (!c) throw new Error("Workers AI is not configured.");
   const out: number[][] = [];
   for (let i = 0; i < texts.length; i += 32) {
-    const batch = texts.slice(i, i + 32);
+    // Personal data never goes to the cloud, not even for search vectors.
+    const batch = texts.slice(i, i + 32).map((t) => createMasker().mask(t));
     const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${c.account}/ai/run/${c.model}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" },

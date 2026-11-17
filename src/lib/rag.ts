@@ -9,6 +9,7 @@
  * Pure functions only (no network, no storage), so they are unit-tested in tests/rag.test.ts.
  */
 import { tokens } from "./questionnaire.ts";
+import { withEnglishTerms } from "./bangla-glossary.ts";
 
 export interface Passage {
   /** "<docId>#<n>" */
@@ -135,7 +136,8 @@ export function fuse(rankings: Array<Array<{ id: string }>>, k = 60): Map<string
 
 /** Keyword + meaning search, fused, top `k` passages. Works keyword-only when there are no vectors. */
 export function hybridSearch(question: string, passages: Passage[], queryVec: Int8Array | null, k = 4): RankedPassage[] {
-  const byKeyword = keywordRank(question, passages).slice(0, 20);
+  // A Bangla question also searches with English words for its compliance terms (documents are mostly English).
+  const byKeyword = keywordRank(withEnglishTerms(question), passages).slice(0, 20);
   const byMeaning = queryVec ? meaningRank(queryVec, passages).slice(0, 20) : [];
   const fused = fuse([byKeyword, byMeaning]);
   const kw = new Set(byKeyword.map((r) => r.id));

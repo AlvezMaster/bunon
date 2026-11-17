@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
     dueOn: q.dueOn,
     questions: [...q.questions.map(({ id, text }) => ({ id, text })), ...(state.asked[q.id] ?? []).map(({ id, text, askedAt }) => ({ id, text, addedAt: askedAt }))].map((x) => ({
       ...x,
-      answer: state.answers[x.id] ?? null,
+      // Where an answer was reused from names another buyer's question, so it stays out of the export.
+      answer: state.answers[x.id] ? { ...state.answers[x.id], reusedFrom: undefined } : null,
     })),
   }));
   const docTitle = (id: string | null) => FACTORY_DOCUMENTS.find((d) => d.id === id)?.title ?? "";

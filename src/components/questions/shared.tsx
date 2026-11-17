@@ -23,6 +23,21 @@ export interface Approved {
   approvedAt?: string;
   ledgerBlock: number | null;
   aiDrafted: boolean;
+  /** Factory only: the earlier question whose approved answer was reused. */
+  reusedFrom?: string | null;
+}
+/** Factory only: an answer already sent to another buyer that also answers this question. */
+export interface Reuse {
+  fromQuestionId: string;
+  fromQuestion: string;
+  fromBuyer: string;
+  answer: string;
+  quote: string;
+  docId: string | null;
+  docTitle: string | null;
+  approvedAt: string;
+  how: "same" | "words" | "meaning";
+  topic: string;
 }
 export interface Question {
   id: string;
@@ -53,6 +68,8 @@ export interface Payload {
   factories?: Array<{ id: string; name: string }>;
   documents: Doc[];
   answers: Record<string, Approved>;
+  /** Factory only: question id → an earlier answer that can be reused. */
+  reuse?: Record<string, Reuse>;
   model: string | null;
 }
 

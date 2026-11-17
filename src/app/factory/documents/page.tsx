@@ -252,7 +252,7 @@ export default function FactoryDocuments() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">{t(d.title)}</p>
                     <p className="text-sm text-ink-faint">
-                      {d.fileName} · {d.passages} {t("passages")} · {d.demo ? t("Demo document") : `${t("Added")} ${day(d.uploadedAt)}`}
+                      {d.fileName} · {d.passages} {t(d.passages === 1 ? "passage" : "passages")} · {d.demo ? t("Demo document") : `${t("Added")} ${day(d.uploadedAt)}`}
                       {d.validUntil ? ` · ${t(expired ? "Expired" : "Valid until")} ${day(d.validUntil)}` : ""}
                     </p>
                   </div>
