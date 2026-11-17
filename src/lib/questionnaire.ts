@@ -380,8 +380,8 @@ export function finalizeDraft(
 }
 
 /** Draft used when the local model is unavailable: sort by rules, attach the best evidence, leave the answer to a person. */
-export function ruleDraft(question: BuyerQuestion | { id: string; text: string }, durationMs = 0): QuestionDraft {
-  const evidence = retrieveEvidence(question.text);
+export function ruleDraft(question: BuyerQuestion | { id: string; text: string }, durationMs = 0, found?: EvidencePassage[]): QuestionDraft {
+  const evidence = found ?? retrieveEvidence(question.text);
   const decision = decideCategory(question.text);
   const category = decision.category;
   return {
@@ -394,8 +394,8 @@ export function ruleDraft(question: BuyerQuestion | { id: string; text: string }
     confidence: 0,
     status: "needs_person",
     reason: evidence.length
-      ? "The local AI model is not running. The most relevant document is attached; please answer and approve."
-      : "The local AI model is not running and no document on file matches this question.",
+      ? "No AI model is available right now. The most relevant passages are attached; please answer and approve."
+      : "No AI model is available right now and no document on file matches this question.",
     engine: "rules",
     durationMs,
     evidence,

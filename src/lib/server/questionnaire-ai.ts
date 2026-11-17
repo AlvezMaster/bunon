@@ -9,13 +9,15 @@
 import {
   decideCategory,
   finalizeDraft,
-  retrieveEvidence,
   ruleDraft,
   type BuyerQuestion,
   type ModelDraft,
   type QuestionDraft,
 } from "../questionnaire.ts";
 import { getOllamaStatus } from "./ollama.ts";
+import { loadCorpus } from "./documents-repo.ts";
+import { embed } from "./embeddings.ts";
+import { dequantize, hybridSearch, quantize } from "../rag.ts";
 import { workersAiJson } from "./workers-ai.ts";
 import { kvRead, kvUpdate } from "./kv.ts";
 import { sha256Hex } from "../crypto.ts";
@@ -53,14 +55,22 @@ function pickQaModel(models: string[], fallback: string | null, cloud: boolean):
   return models.find((m) => /qwen3\.5/i.test(m)) ?? fallback;
 }
 
-export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">): Promise<QuestionDraft> {
+/** Finds the passages in this factory's documents that best answer the question (keywords + meaning). */
+export async function findEvidence(orgId: string, questionText: string) {
+  const corpus = await loadCorpus(orgId);
+  const q = corpus.model && corpus.passages.some((p) => p.vec) ? await embed("queries", [questionText]) : null;
+  const queryVec = q && q.model === corpus.model ? dequantize(quantize(q.vectors[0])) : null;
+  return { corpus, evidence: hybridSearch(questionText, corpus.passages, queryVec), meaning: !!queryVec };
+}
+
+export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">, orgId: string): Promise<QuestionDraft> {
   const started = Date.now();
+  const { corpus, evidence } = await findEvidence(orgId, question.text);
   const status = await getOllamaStatus();
   const cloud = status.baseUrl === "workers-ai";
   const model = pickQaModel(status.models, status.model, cloud);
-  if (!status.available || !model) return ruleDraft(question, Date.now() - started);
+  if (!status.available || !model) return ruleDraft(question, Date.now() - started, evidence);
 
-  const evidence = retrieveEvidence(question.text);
   const decision = decideCategory(question.text);
   const passages = evidence.map((p) => `[${p.id}] ${p.text}`).join("\n\n") || "(no passages found)";
 
@@ -79,10 +89,10 @@ export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">):
           for (const k of Object.keys(all).sort((a, b) => all[a].at - all[b].at).slice(0, Math.max(0, Object.keys(all).length - 400))) delete all[k];
         });
       }
-      return finalizeDraft(question.id, question.text, raw, evidence, `workers-ai:${model}`, Date.now() - started, decision);
+      return finalizeDraft(question.id, question.text, raw, evidence, `workers-ai:${model}`, Date.now() - started, decision, corpus.docs);
     } catch (error) {
       console.warn("[bunon/questionnaire] cloud draft failed, using rules:", (error as Error).message);
-      return ruleDraft(question, Date.now() - started);
+      return ruleDraft(question, Date.now() - started, evidence);
     }
   }
 
@@ -108,9 +118,9 @@ export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">):
     if (!res.ok) throw new Error(`Ollama returned HTTP ${res.status}`);
     const json = (await res.json()) as { message?: { content?: string } };
     const raw = JSON.parse(json.message?.content ?? "{}") as ModelDraft;
-    return finalizeDraft(question.id, question.text, raw, evidence, `ollama:${model}`, Date.now() - started, decision);
+    return finalizeDraft(question.id, question.text, raw, evidence, `ollama:${model}`, Date.now() - started, decision, corpus.docs);
   } catch (error) {
     console.warn("[bunon/questionnaire] model draft failed, using rules:", (error as Error).message);
-    return ruleDraft(question, Date.now() - started);
+    return ruleDraft(question, Date.now() - started, evidence);
   }
 }

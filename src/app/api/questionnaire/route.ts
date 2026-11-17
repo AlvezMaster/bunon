@@ -10,7 +10,8 @@ import { recordBlockParties } from "@/lib/server/ledger-parties";
 import { appendLedgerBlock } from "@/lib/server/ledger-repo";
 import { getOllamaStatus } from "@/lib/server/ollama";
 import { quoteIsInDocument } from "@/lib/questionnaire";
-import { FACTORY_DOCUMENTS, findFactoryDocument } from "@/lib/fixtures/factory-documents";
+import { FACTORY_DOCUMENTS } from "@/lib/fixtures/factory-documents";
+import { listDocuments, loadCorpus } from "@/lib/server/documents-repo";
 import { canonicalJson, sha256Hex } from "@/lib/crypto";
 import { partnerOf, acceptsNewQuestions } from "@/lib/links";
 
@@ -64,10 +65,13 @@ export async function GET(req: NextRequest) {
     role: session.role,
     questionnaires,
     factories,
-    // Buyers see which document an answer came from, not the factory's full files.
-    documents: docsVisible
-      ? FACTORY_DOCUMENTS.map(({ id, title, fileName, text }) => (scope.orgId === FIXTURE_DOCS_ORG ? { id, title, fileName, text } : { id, title, fileName }))
-      : [],
+    // A factory sees its own document list; buyers only ever get titles (answers also carry the title).
+    documents:
+      session.role === "factory"
+        ? (await listDocuments(scope.orgId)).map(({ id, title, fileName }) => ({ id, title, fileName }))
+        : docsVisible
+          ? FACTORY_DOCUMENTS.map(({ id, title, fileName }) => ({ id, title, fileName }))
+          : [],
     answers: Object.fromEntries(Object.entries(state.answers ?? {}).filter(([id]) => ids.has(id))),
     model: session.role === "factory" && ollama.available ? qaModel : null,
   });
@@ -160,18 +164,19 @@ export async function POST(req: NextRequest) {
   if (!isLiveWith(scope, parties.buyer)) return fail("You are no longer linked with this buyer.", 409);
 
   if (body.action === "draft") {
-    if (scope.orgId !== FIXTURE_DOCS_ORG) return fail("Upload your documents first; AI drafts need them.", 409);
-    return NextResponse.json({ draft: await draftAnswer(question) });
+    if (!(await listDocuments(scope.orgId)).length) return fail("Upload your documents first; answers are drafted from them.", 409);
+    return NextResponse.json({ draft: await draftAnswer(question, scope.orgId) });
   }
 
   if (body.action === "approve") {
     const answer = typeof body.answer === "string" ? body.answer.trim() : "";
     const quote = typeof body.quote === "string" ? body.quote.trim() : "";
-    const docId = body.docId && findFactoryDocument(body.docId) ? body.docId : null;
+    const { docs } = await loadCorpus(scope.orgId);
+    const doc = body.docId ? docs.find((d) => d.id === body.docId) : undefined;
+    const docId = doc ? doc.id : null;
     if (!answer || answer.length > 500) return fail("Write an answer (up to 500 characters).");
     // A cited quote must really be in the cited document, even after a person edits the answer.
-    if (quote && (!docId || !quoteIsInDocument(quote, docId))) return fail("The quoted sentence is not in the cited document.");
-    const doc = docId ? findFactoryDocument(docId) : undefined;
+    if (quote && (!docId || !quoteIsInDocument(quote, docId, docs))) return fail("The quoted sentence is not in the cited document.");
     const sealed = { questionId: question.id, answer, quote, docId };
     const { block } = await appendLedgerBlock({
       type: "ANSWER APPROVED",
@@ -183,7 +188,7 @@ export async function POST(req: NextRequest) {
       status: "verified",
     });
     await recordBlockParties(block.block, [parties.factory, parties.buyer]);
-    const saved = { ...sealed, approvedBy: guard.session.name, approvedAt: new Date().toISOString(), ledgerBlock: block.block, aiDrafted: body.aiDrafted === true };
+    const saved = { ...sealed, docTitle: doc?.title ?? null, approvedBy: guard.session.name, approvedAt: new Date().toISOString(), ledgerBlock: block.block, aiDrafted: body.aiDrafted === true };
     await saveAnswer(saved);
     return NextResponse.json({ approved: saved });
   }

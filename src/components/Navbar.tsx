@@ -22,7 +22,7 @@ const PUBLIC_LINKS: NavLink[] = [
 function workspaceLinks(role: UserRole): NavLink[] {
   const report = { href: "/reports", label: "Reports", also: "/passport" };
   return role === "factory"
-    ? [{ href: "/factory", label: "Dashboard", exact: true }, { href: "/factory/orders", label: "Orders", match: "/factory/order" }, { href: "/factory/questionnaire", label: "Buyer questions" }, { href: "/factory/buyers", label: "Buyers" }, report]
+    ? [{ href: "/factory", label: "Dashboard", exact: true }, { href: "/factory/orders", label: "Orders", match: "/factory/order" }, { href: "/factory/questionnaire", label: "Questions" }, { href: "/factory/documents", label: "Documents" }, { href: "/factory/buyers", label: "Buyers" }, report]
     : [{ href: "/buyer", label: "Dashboard", exact: true }, { href: "/buyer/verify", label: "Verify a supplier" }, { href: "/buyer/questions", label: "Questions" }, { href: "/buyer/factories", label: "Factories" }, report];
 }
 
@@ -202,7 +202,7 @@ export default function Navbar() {
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface-2 text-[10px] font-medium tracking-wider text-ink">
                     {user.initials}
                   </span>
-                  <span className="hidden max-w-[160px] truncate text-[13px] font-medium leading-none text-ink md:block">
+                  <span className="hidden max-w-[160px] truncate text-[13px] font-medium leading-none text-ink xl:block">
                     {user.name}
                   </span>
                   <span className="hidden rounded border border-ink/[0.08] bg-ink/[0.04] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink-muted lg:inline">

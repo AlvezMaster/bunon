@@ -13,6 +13,8 @@ export interface ApprovedAnswer {
   answer: string;
   quote: string;
   docId: string | null;
+  /** Title of the cited document at the time of sending. */
+  docTitle?: string | null;
   approvedBy: string;
   approvedAt: string;
   ledgerBlock: number | null;

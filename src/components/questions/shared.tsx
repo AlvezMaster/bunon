@@ -18,6 +18,7 @@ export interface Approved {
   answer: string;
   quote: string;
   docId: string | null;
+  docTitle?: string | null;
   approvedBy: string;
   approvedAt?: string;
   ledgerBlock: number | null;
@@ -260,10 +261,10 @@ export function SentAnswer({ a, doc }: { a: Approved; doc?: Doc }) {
       <p className="text-base text-ink">{a.answer}</p>
       {a.quote && <blockquote className="border-l-2 border-success pl-3 text-sm italic text-ink-muted">“{a.quote}”</blockquote>}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-faint">
-        {doc ? (
+        {doc || a.docTitle ? (
           <span className="flex items-center gap-1.5">
             <FileText className="h-4 w-4" aria-hidden="true" />
-            {t(doc.title)}
+            {t(doc?.title ?? a.docTitle ?? "")}
           </span>
         ) : (
           <span>{t("Written by")} {a.approvedBy}</span>

@@ -11,6 +11,7 @@ const EVENT_LABEL: Record<string, string> = {
   "CERT INGESTION": "Certificate checked",
   "ORDER BOM INGESTION": "New order",
   "ANSWER APPROVED": "Answer approved",
+  "DOCUMENT ADDED": "Document added",
 };
 
 export function eventLabel(type: string): string {

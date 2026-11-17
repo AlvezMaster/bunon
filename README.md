@@ -15,7 +15,7 @@ Bunon **checks documents; it does not certify factories.**
 | Part | Status |
 |---|---|
 | Companies, orders, people | **Fictional.** Every company name is invented and marked "(fictional …)" on screen. |
-| Factory documents (fire licence, wage policy, …) | **Synthetic**, written for this demo (`src/lib/fixtures/factory-documents.ts`). |
+| Factory documents (fire licence, wage policy, …) | The demo factory's are **synthetic**, written for this demo (`src/lib/fixtures/factory-documents.ts`). **Any factory can upload its own** PDFs and text files on the Documents page. |
 | Certificate registry | **Simulated** (`src/lib/certificate-registry.ts`), labelled "Simulated registry" on screen. |
 | Buyer questionnaires | Written for this demo in the style of common social-audit topics (`src/lib/questionnaire.ts`). |
 | Questionnaire drafting, quote checks, ledger, access rules, sign-up, invites, unlink, export | **Real and working** in the code and on the live site. |
@@ -35,7 +35,7 @@ draft answer with quote ───────────▶        /api/questio
 ```
 
 1. **Certificates.** A factory uploads a certificate. Bunon reads it (local model, or rules), compares it with the registry, and seals the result in the ledger. Only the server can mark a certificate renewed, and only for that factory's own order and the named supplier.
-2. **Buyer questions.** A buyer sends a questionnaire to a linked factory. For each question Bunon finds the most relevant passages, and the model drafts an answer with a quote. The server then checks:
+2. **Buyer questions.** A buyer writes a questionnaire once and sends it to one or more linked factories. For each question Bunon searches **that factory's own documents** two ways at once (keywords, and meaning through multilingual Qwen embeddings, merged with reciprocal rank fusion), and the model drafts an answer from the top 4 passages with a quote. The server then checks:
    - the quote must appear word for word in the cited document;
    - a separate Naive Bayes decision model must agree that the question is answerable from a document;
    - a "Yes" may not rest on a negative sentence, and a "when / how many" question needs a value, not just "Yes".
@@ -62,6 +62,19 @@ draft answer with quote ───────────▶        /api/questio
 | qwen3.8-27b (Cloudflare Workers AI, online demo) | 9 / 10 | 0 | 3 / 3 | about 2.5 s typical, occasionally 10 s+ |
 
 Certificate reading with qwen3.5:4b takes about 3.4 s per document (valid → verified, expired → flagged, tampered → flagged).
+
+### Retrieval (16 reworded questions, 4 of them in Bangla; `scripts/rag-questions.ts`)
+
+Does the right document come back? Keyword search runs with `node scripts/eval-retrieval.ts`; hybrid search was measured on a preview deployment through the Documents page's search.
+
+| Search | Right document first | Right document in the top 4 | Bangla questions (first / top 4) |
+|---|---|---|---|
+| Keywords only | 9 / 16 | 10 / 16 | 0 / 4 and 0 / 4 |
+| Keywords + meaning (Qwen3-Embedding 0.6B) | 13 / 16 | 16 / 16 | 3 / 4 and 4 / 4 |
+
+### How documents are handled
+
+Upload (PDF with a text layer, .txt or .md, up to 4 MB) → text extraction → passages of about 700 characters split at paragraph and sentence boundaries → an embedding per passage, stored as 8-bit numbers → the file's SHA-256 fingerprint sealed in the ledger. Scanned PDFs without text are refused with a clear message (no OCR yet). The Documents page has a "Try a question" box that shows which passages a question would be answered from, and whether each was found by keywords or by meaning.
 
 ## Impact we are aiming for (targets, not measured results)
 
@@ -91,6 +104,8 @@ npm test             # unit tests
 npm run eval:qa      # questionnaire accuracy test (needs Ollama with qwen3.5:4b)
 ```
 
+Meaning search uses `@cf/qwen/qwen3-embedding-0.6b` online (`WORKERS_AI_EMBED_MODEL` to change it) and, on a local computer, an Ollama embedding model named in `OLLAMA_EMBED_MODEL` (default `qwen3-embedding:0.6b`); without one, search uses keywords only.
+
 Settings (see `.env.example`): `BUNON_SESSION_SECRET`; `BUNON_DATA_SOURCE` (`auto`, `memory`, `postgres` or `d1`); for D1: `D1_ACCOUNT_ID`, `D1_DATABASE_ID`, `D1_API_TOKEN`; `CRON_SECRET`; `OLLAMA_BASE_URL`. For the hosted model: `AI_PROVIDER=workers-ai` and optionally `WORKERS_AI_MODEL` (the token also needs Workers AI access). Leave `AI_PROVIDER` unset to use Ollama on the same computer. Create the D1 tables with `npx wrangler d1 execute bunon --remote --file db/d1-schema.sql`.
 
 ## Tools we used (disclosure)
@@ -110,6 +125,5 @@ Settings (see `.env.example`): `BUNON_SESSION_SECRET`; `BUNON_DATA_SOURCE` (`aut
 
 ## Planned (not built yet)
 
-- Real document uploads for any factory's questionnaires (today the demo factory's documents are built in).
 - Checks of factory details against government and BGMEA/BKMEA records, with an admin review.
 - Per-link encryption keys, email verification and notifications, multi-user companies, billing.
