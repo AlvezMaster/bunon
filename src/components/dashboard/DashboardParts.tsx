@@ -95,6 +95,78 @@ export function NextSteps({ steps }: { steps: NextStep[] }) {
   );
 }
 
+export interface NextUpTask {
+  Icon: LucideIcon;
+  title: string;
+  /** One short line under the title. */
+  note: string;
+  /** The one big button. */
+  action: string;
+  href?: string;
+  onClick?: () => void;
+  /** Nothing urgent: the button is quiet instead of the accent colour. */
+  calm?: boolean;
+  tone?: Tone;
+}
+
+/** The single most useful thing to do now, with one big button. */
+export function NextUp({ task }: { task: NextUpTask }) {
+  const { Icon, title, note, action, href, onClick, calm, tone } = task;
+  const btn = calm ? "btn-tactile-hollow inline-flex min-h-[52px] items-center justify-center gap-2 px-6 text-base" : "btn-primary-action min-h-[52px] px-6 text-base";
+  const iconTone = tone === "bad" ? "bg-danger-soft text-danger" : tone === "review" ? "bg-warning/10 text-warning" : "bg-brand/10 text-brand";
+  const label = (
+    <>
+      {t(action)}
+      <ArrowRight className="h-5 w-5" aria-hidden="true" />
+    </>
+  );
+  return (
+    <section aria-labelledby="next-up-title" className="glass-card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
+      <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconTone}`}>
+        <Icon className="h-7 w-7" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="section-index">{t("Next up")}</p>
+        <h2 id="next-up-title" className="font-display text-2xl font-semibold text-ink [text-wrap:balance] sm:text-3xl">
+          {title}
+        </h2>
+        <p className="text-base text-ink-muted">{note}</p>
+      </div>
+      {href ? (
+        <Link href={href} className={`${btn} self-stretch sm:self-center`}>
+          {label}
+        </Link>
+      ) : (
+        <button type="button" onClick={onClick} className={`${btn} self-stretch sm:self-center`}>
+          {label}
+        </button>
+      )}
+    </section>
+  );
+}
+
+export interface QuickLink {
+  href: string;
+  Icon: LucideIcon;
+  label: string;
+  count?: number;
+}
+
+/** Quiet one-click links to the other screens, so the dashboard itself stays short. */
+export function QuickLinks({ links }: { links: QuickLink[] }) {
+  return (
+    <nav aria-label={t("Go to")} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {links.map(({ href, Icon, label, count }) => (
+        <Link key={href} href={href} className="glass-card flex min-h-[56px] items-center gap-3 px-4 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:text-brand">
+          <Icon className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate">{t(label)}</span>
+          {count !== undefined && <span className="rounded-full bg-ink/[0.07] px-2 py-0.5 text-xs font-semibold tabular-nums text-ink dark:bg-white/[0.08]">{count}</span>}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /** A list row that is one big link or button, with a chevron that says "this opens". */
 export function RowLink({ href, onClick, children, label }: { href?: string; onClick?: () => void; children: React.ReactNode; label?: string }) {
   const inner = (

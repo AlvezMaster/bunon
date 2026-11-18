@@ -165,6 +165,50 @@ export async function createAccount(a: NewAccount): Promise<{ user: StoredUser; 
   return { user, org };
 }
 
+/**
+ * Changes a signed-up user's name or passphrase. Only users stored in the app can change; the shared demo
+ * accounts are seeded and stay as they are, so judges and visitors can always sign in to them.
+ */
+export async function updateStoredUser(id: string, change: { fullName?: string; password?: string }): Promise<StoredUser> {
+  const hash = change.password ? await hashPassword(change.password) : null;
+  const list = await kvUpdate<StoredUser[]>(K.users, none([]), (all) => {
+    const u = all.find((x) => x.id === id);
+    if (!u) throw new KvAbort("NO_SUCH_USER");
+    if (change.fullName) {
+      u.full_name = change.fullName.trim();
+      u.avatar_initial = u.full_name.charAt(0).toUpperCase() || "?";
+    }
+    if (hash) u.password_hash = hash;
+  });
+  return list.find((x) => x.id === id)!;
+}
+
+// ---------- sign out everywhere ----------
+
+const SIGNOUTS_KEY = "accounts:signouts";
+const SIGNOUT_CACHE_MS = 30_000;
+let signoutCache: { at: number; map: Record<string, number> } | null = null;
+
+/** Ends every session of this user that started before now (in seconds, like a session's iat). */
+export async function signOutEverywhere(userId: string, nowSec = Math.floor(Date.now() / 1000)): Promise<number> {
+  const map = await kvUpdate<Record<string, number>>(SIGNOUTS_KEY, none({}), (all) => {
+    all[userId] = nowSec;
+  });
+  signoutCache = { at: Date.now(), map: { ...map } };
+  return nowSec;
+}
+
+/**
+ * When this user last signed out everywhere (seconds), or 0. Read through a 30-second cache, so other servers
+ * notice a sign-out within half a minute without a database read on every request.
+ */
+export async function signedOutAt(userId: string): Promise<number> {
+  if (!signoutCache || Date.now() - signoutCache.at > SIGNOUT_CACHE_MS) {
+    signoutCache = { at: Date.now(), map: await kvRead<Record<string, number>>(SIGNOUTS_KEY, none({})).catch(() => signoutCache?.map ?? {}) };
+  }
+  return signoutCache.map[userId] ?? 0;
+}
+
 export async function getFactoryProfile(orgId: string): Promise<FactoryProfile | null> {
   return (await kvRead<Record<string, FactoryProfile>>(K.profiles, none({})))[orgId] ?? null;
 }

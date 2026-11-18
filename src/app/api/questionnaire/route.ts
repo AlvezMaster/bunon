@@ -47,7 +47,7 @@ function linkStateOf(scope: Scope, q: Pick<AnyQuestionnaire, "buyer" | "factory"
 
 /** GET /api/questionnaire: questionnaires, documents on file, approved answers and which model drafts. */
 export async function GET(req: NextRequest) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const [state, ollama, scope] = await Promise.all([getCatalogState(), getOllamaStatus(), scopeFor(session)]);
   const questionnaires = (await visibleQuestionnaires(scope, state)).map((q) => ({
@@ -116,7 +116,7 @@ const cleanQuestion = (t: unknown) => (typeof t === "string" ? t.trim().replace(
  *            "approve" (send) an answer, which only a person can do
  */
 export async function POST(req: NextRequest) {
-  const guard = requireSession(req);
+  const guard = await requireSession(req);
   if (!guard.ok) return guard.response;
   const session = guard.session;
   let body: Body;

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (q.factories < 1) errors.factories = "How many factories?";
   if (Object.keys(errors).length) return NextResponse.json({ error: "Check the highlighted fields.", errors }, { status: 400 });
 
-  const session = getSession(req);
+  const session = await getSession(req);
   const orgId = session?.role === "factory" ? (await scopeFor(session)).orgId : null;
   const saved = await saveQuoteRequest({ ...q, orgId });
   return NextResponse.json({ ok: true, id: saved.id }, { status: 201 });

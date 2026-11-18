@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/audit-ledger?limit=100 — newest first, with chain verification. Needs any signed-in user. */
 export async function GET(req: NextRequest) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     return NextResponse.json({ success: false, error: "Sign in to view the ledger.", code: "UNAUTHENTICATED" }, { status: 401 });
   }
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
  * and hash; clients only describe the event. Requires a session whose role may record that type.
  */
 export async function POST(req: NextRequest) {
-  const guard = requireSession(req);
+  const guard = await requireSession(req);
   if (!guard.ok) return guard.response;
   // An AI agent never writes ledger entries directly; its prepared drafts are logged by the questionnaire API.
   if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });

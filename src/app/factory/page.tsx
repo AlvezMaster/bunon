@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, MessageSquareText, Plus, ShieldAlert, ShieldCheck, UserPlus } from "lucide-react";
+import { FilePlus2, FileText, History, MessageSquareText, Package, ShieldAlert, ShieldCheck, UserPlus } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
-import { DashboardHeader, NextSteps, Panel, RecentActivity, RowLink, StatusBadge, type NextStep } from "@/components/dashboard/DashboardParts";
+import { DashboardHeader, NextUp, Panel, QuickLinks, RowLink, StatusBadge, type NextUpTask, type QuickLink } from "@/components/dashboard/DashboardParts";
 import { useQuestionnaires } from "@/components/questions/shared";
 import { useBunonStore } from "@/lib/store";
 import { listStyles, styleClearance, visibleOrders } from "@/lib/styles";
@@ -23,6 +23,13 @@ export default function FactoryDashboard() {
   const setActiveSupplierStyleId = useBunonStore((s) => s.setActiveSupplierStyleId);
   const partners = useBunonStore((s) => s.partners);
   const { data: questions } = useQuestionnaires();
+  const [docCount, setDocCount] = useState<number | null>(null);
+  useEffect(() => {
+    void fetch("/api/documents", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { documents?: unknown[] } | null) => setDocCount(j?.documents?.length ?? null))
+      .catch(() => undefined);
+  }, []);
 
   const orders = visibleOrders(listStyles(customStyles, renewals), session, visibleCodes);
   const today = new Date().toISOString().slice(0, 10);
@@ -42,40 +49,11 @@ export default function FactoryDashboard() {
     .sort((a, b) => Number(b.expired) - Number(a.expired));
   const held = orders.filter((o) => !styleClearance(o).cleared).length;
 
-  // One short line of context under the title, instead of a row of number cards.
-  const summary =
-    orders.length === 0 ? (
-      <>{t("Add your first order, then invite its buyer from the Buyers page.")}</>
-    ) : attention.length === 0 ? (
-      <>{t("Every certificate is in date")}.</>
-    ) : (
-      <>
-        {attention.length} {t(attention.length === 1 ? "certificate needs renewing" : "certificates need renewing")}
-        {held > 0 && (
-          <>
-            {" · "}
-            {held} {t(held === 1 ? "order is on hold" : "orders are on hold")}
-          </>
-        )}
-        .
-      </>
-    );
-
-  const toAnswer = questions
-    ? questions.questionnaires.filter((q) => q.linkState !== "closed").reduce((n, q) => n + q.questions.filter((x) => !questions.answers[x.id]).length, 0)
-    : undefined;
+  const open = questions ? questions.questionnaires.filter((q) => q.linkState !== "closed") : [];
+  const waiting = open.flatMap((q) => q.questions.filter((x) => !questions?.answers[x.id]));
+  const ready = waiting.filter((x) => questions?.reuse?.[x.id] || questions?.prepared?.[x.id]).length;
   const buyers = partners.filter((p) => p.status === "active" || p.status === "unlink_pending").length;
-  const expiredCount = attention.filter((a) => a.expired).length;
-
-  // The four jobs a factory comes here for. The most urgent one gets the accent colour.
-  const steps: NextStep[] = [
-    attention.length
-      ? { href: "#needs-attention", Icon: ShieldAlert, title: "Renew certificates", note: expiredCount ? "Some have expired; orders are on hold" : "Some expire within 90 days", count: attention.length, primary: expiredCount > 0 }
-      : { href: "/factory/orders", Icon: ShieldCheck, title: "Certificates", note: "All in date. See every order", count: 0 },
-    { href: "/factory/questionnaire", Icon: MessageSquareText, title: "Answer buyer questions", note: "Answers come from your documents", count: toAnswer, primary: !expiredCount && !!toAnswer },
-    { href: "/factory/buyers", Icon: UserPlus, title: "Invite a buyer", note: "Send a link to connect", count: buyers },
-    { href: "/factory/order?new=1", Icon: FilePlus2, title: "Add an order", note: "Track its certificates" },
-  ];
+  const expired = attention.filter((a) => a.expired);
 
   // `fixTier` opens the upload panel for that certificate as soon as the order page loads.
   const openOrder = (code: string, fixTier?: string) => {
@@ -83,17 +61,60 @@ export default function FactoryDashboard() {
     router.push(fixTier ? `/factory/order?fix=${encodeURIComponent(fixTier)}` : "/factory/order");
   };
 
+  // Only the one most useful job gets the big button; everything else is a quiet link below.
+  const next: NextUpTask = expired.length
+    ? {
+        Icon: ShieldAlert,
+        tone: "bad",
+        title: `${expired.length} ${t(expired.length === 1 ? "certificate has expired" : "certificates have expired")}`,
+        note: held ? `${held} ${t(held === 1 ? "order is on hold until you renew it." : "orders are on hold until you renew them.")}` : t("Renew it so no order goes on hold."),
+        action: "Fix the first one",
+        onClick: () => openOrder(expired[0].order, expired[0].tier.id),
+      }
+    : waiting.length
+      ? {
+          Icon: MessageSquareText,
+          title: `${waiting.length} ${t(waiting.length === 1 ? "buyer question to answer" : "buyer questions to answer")}`,
+          note: ready ? `${ready} ${t("are already drafted. Check them and send.")}` : t("Bunon drafts each answer from your documents. You check and send."),
+          action: "Answer questions",
+          href: "/factory/questionnaire",
+        }
+      : attention.length
+        ? {
+            Icon: ShieldAlert,
+            tone: "review",
+            title: `${attention.length} ${t(attention.length === 1 ? "certificate expires soon" : "certificates expire soon")}`,
+            note: t("Renew within 90 days so no order goes on hold."),
+            action: "Renew the first one",
+            onClick: () => openOrder(attention[0].order, attention[0].tier.id),
+          }
+        : docCount === 0
+          ? { Icon: FileText, title: t("Add your documents"), note: t("Licences, policies and audit reports. Bunon answers buyers from them."), action: "Add documents", href: "/factory/documents" }
+          : buyers === 0
+            ? { Icon: UserPlus, title: t("Invite your first buyer"), note: t("Send a link. Once they accept, they can ask you questions here."), action: "Invite a buyer", href: "/factory/buyers" }
+            : orders.length === 0
+              ? { Icon: FilePlus2, title: t("Add your first order"), note: t("Then Bunon tracks every certificate it needs."), action: "Add an order", href: "/factory/order?new=1" }
+              : { Icon: ShieldCheck, calm: true, title: t("You're all caught up"), note: t("Every certificate is in date and every question is answered."), action: "See your orders", href: "/factory/orders" };
+
+  const links: QuickLink[] = [
+    { href: "/factory/questionnaire", Icon: MessageSquareText, label: "Questions", count: questions ? waiting.length : undefined },
+    { href: "/factory/orders", Icon: Package, label: "Orders", count: orders.length },
+    { href: "/factory/documents", Icon: FileText, label: "Documents", count: docCount ?? undefined },
+    { href: "/factory/buyers", Icon: UserPlus, label: "Buyers", count: buyers },
+    { href: "/ledger", Icon: History, label: "Activity log" },
+  ];
+
   return (
     <div className="min-h-screen pb-24">
       <Navbar />
       <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pt-10 sm:px-6">
-        <DashboardHeader eyebrow="Factory dashboard" title={session?.organization ?? "Your factory"} note={summary}>
+        <DashboardHeader eyebrow="Factory dashboard" title={session?.organization ?? "Your factory"}>
           <DemoDataBadge />
         </DashboardHeader>
 
-        <NextSteps steps={steps} />
+        <NextUp task={next} />
 
-        {attention.length > 0 && (
+        {attention.length > 1 && (
           <div id="needs-attention" className="scroll-mt-24">
             <Panel title="Needs your attention">
               <ul className="divide-y divide-line">
@@ -122,40 +143,7 @@ export default function FactoryDashboard() {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <Panel
-            title="Your orders"
-            action={
-              <Link href="/factory/order?new=1" className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand hover:underline">
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {t("New order")}
-              </Link>
-            }
-          >
-            {orders.length === 0 && <p className="text-sm text-ink-muted">{t("No orders yet. Add your first order to start tracking its certificates.")}</p>}
-            <ul className="divide-y divide-line">
-              {orders.map((o) => {
-                const c = styleClearance(o);
-                return (
-                  <li key={o.code}>
-                    <RowLink onClick={() => openOrder(o.code)}>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-ink">
-                          #{o.code} · {o.title}
-                        </span>
-                        <span className="block text-sm text-ink-muted">
-                          {o.buyer.replace(/\s*\(.*\)\s*$/, "")} · {o.volume}
-                        </span>
-                      </span>
-                      <StatusBadge tone={c.cleared ? "ok" : "bad"}>{c.cleared ? "Ready" : "On hold"}</StatusBadge>
-                    </RowLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </Panel>
-          <RecentActivity empty="Nothing recorded yet." />
-        </div>
+        <QuickLinks links={links} />
       </main>
     </div>
   );

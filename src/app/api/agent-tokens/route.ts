@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  *   POST { action: "revoke", id }
  */
 async function guard(req: NextRequest) {
-  const g = requireSession(req, ["factory"]);
+  const g = await requireSession(req, ["factory"]);
   if (!g.ok) return { error: g.response };
   if (isAgentSession(g.session)) return { error: NextResponse.json({ error: "An AI agent can't manage agent tokens." }, { status: 403 }) };
   return { session: g.session, scope: await scopeFor(g.session) };
@@ -30,7 +30,15 @@ async function guard(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const g = await guard(req);
   if (g.error) return g.error;
-  return NextResponse.json({ tokens: await listAgentTokens(g.scope.orgId), max: MAX_TOKENS_PER_FACTORY, endpoint: `${req.nextUrl.origin}/api/mcp/factory` });
+  const plan = (await getSubscription(g.scope.orgId)).plan;
+  return NextResponse.json({
+    tokens: await listAgentTokens(g.scope.orgId),
+    max: MAX_TOKENS_PER_FACTORY,
+    endpoint: `${req.nextUrl.origin}/api/mcp/factory`,
+    plan,
+    /** False on Starter: the page shows an upgrade card instead of the setup steps. */
+    allowed: PLANS[plan].limits.agentTokens !== 0,
+  });
 }
 
 export async function POST(req: NextRequest) {

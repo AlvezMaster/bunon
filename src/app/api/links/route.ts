@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/links: this company's links (with the partner's name and profile) and, for factories, its invites. */
 export async function GET(req: NextRequest) {
-  const guard = requireSession(req);
+  const guard = await requireSession(req);
   if (!guard.ok) return guard.response;
   await runLinkJobs();
   const scope = await scopeFor(guard.session);
@@ -57,7 +57,7 @@ type Body =
 
 /** POST /api/links: invite, revoke, accept an invite, or unlink / cancel / agree. */
 export async function POST(req: NextRequest) {
-  const guard = requireSession(req);
+  const guard = await requireSession(req);
   if (!guard.ok) return guard.response;
   // Links and invites are a person's decision, never an AI agent's.
   if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });

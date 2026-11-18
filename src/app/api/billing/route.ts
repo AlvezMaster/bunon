@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * Factory people only: an AI agent never sees or changes billing.
  */
 async function guard(req: NextRequest) {
-  const g = requireSession(req, ["factory"]);
+  const g = await requireSession(req, ["factory"]);
   if (!g.ok) return { error: g.response };
   if (isAgentSession(g.session)) return { error: NextResponse.json({ error: "Only a person can manage billing." }, { status: 403 }) };
   return { session: g.session, scope: await scopeFor(g.session) };

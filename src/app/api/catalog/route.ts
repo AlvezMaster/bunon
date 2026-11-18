@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * their renewals, and the companies it is linked to. Nothing from unlinked companies is returned.
  */
 export async function GET(req: NextRequest) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const [scope, state] = await Promise.all([scopeFor(session), getCatalogState()]);
   const customStyles = Object.fromEntries(Object.entries(state.customStyles).filter(([, st]) => canSeeStyle(scope, st)));
@@ -32,7 +32,7 @@ type Body =
 
 /** POST /api/catalog: factory accounts record a renewal, reset an order, or add a new order. */
 export async function POST(req: NextRequest) {
-  const guard = requireSession(req, ["factory"]);
+  const guard = await requireSession(req, ["factory"]);
   if (!guard.ok) return guard.response;
   // Orders and renewals are recorded by a person, never by an AI agent.
   if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });

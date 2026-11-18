@@ -33,7 +33,7 @@ export interface IngestResponse {
  * supplier tier of one of its own orders, is saved on that order here, on the server.
  */
 export async function POST(req: NextRequest) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Sign in to check a certificate." }, { status: 401 });
   const contentType = req.headers.get("content-type") ?? "";
   let styleCode: string | null = null;

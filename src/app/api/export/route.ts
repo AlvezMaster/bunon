@@ -25,7 +25,7 @@ const slug = (s: string) => orgName(s).toLowerCase().replace(/[^a-z0-9]+/g, "-")
  * Works while linked and for 30 days after unlinking.
  */
 export async function GET(req: NextRequest) {
-  const guard = requireSession(req);
+  const guard = await requireSession(req);
   if (!guard.ok) return guard.response;
   const scope = await scopeFor(guard.session);
   const link = scope.links.find((l) => l.id === req.nextUrl.searchParams.get("linkId"));

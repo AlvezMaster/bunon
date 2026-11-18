@@ -1,12 +1,12 @@
 "use client";
 
-import { Factory, MessageSquareText, ShieldAlert, ShieldCheck, Search } from "lucide-react";
+import { Factory, History, MessageSquarePlus, MessageSquareText, Package, Search, ShieldAlert, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
-import { DashboardHeader, NextSteps, Panel, RecentActivity, RowLink, StatusBadge, type NextStep } from "@/components/dashboard/DashboardParts";
+import { DashboardHeader, NextUp, QuickLinks, type NextUpTask, type QuickLink } from "@/components/dashboard/DashboardParts";
 import { useQuestionnaires } from "@/components/questions/shared";
 import { useBunonStore } from "@/lib/store";
-import { factoryOf, listStyles, styleClearance, visibleOrders } from "@/lib/styles";
+import { listStyles, styleClearance, visibleOrders } from "@/lib/styles";
 import { t } from "@/lib/i18n";
 
 export default function BuyerDashboard() {
@@ -18,22 +18,44 @@ export default function BuyerDashboard() {
   const { data: questions } = useQuestionnaires();
 
   const orders = visibleOrders(listStyles(customStyles, renewals), session, visibleCodes);
-  const suppliers = [...new Set(orders.map(factoryOf))].map((name) => {
-    const own = orders.filter((o) => factoryOf(o) === name);
-    return { name, orders: own.length, held: own.filter((o) => !styleClearance(o).cleared).length };
-  });
-  const held = suppliers.reduce((n, s) => n + s.held, 0);
-  const answered = questions ? questions.questionnaires.reduce((n, q) => n + q.questions.filter((x) => questions.answers[x.id]).length, 0) : undefined;
+  const held = orders.filter((o) => !styleClearance(o).cleared).length;
+  const all = questions?.questionnaires.flatMap((q) => q.questions) ?? [];
+  const answered = all.filter((x) => questions?.answers[x.id]).length;
+  const waiting = all.length - answered;
   const factories = partners.filter((p) => p.status === "active" || p.status === "unlink_pending").length;
 
-  // The four jobs a buyer comes here for. Orders on hold come first when there are any.
-  const steps: NextStep[] = [
-    held
-      ? { href: "/reports", Icon: ShieldAlert, title: "Orders on hold", note: "A supplier certificate has expired", count: held, primary: true }
-      : { href: "/reports", Icon: ShieldCheck, title: "Your orders", note: "All certificates in date", count: orders.length },
-    { href: "/buyer/questions", Icon: MessageSquareText, title: "Read answers", note: "Each one shows its source sentence", count: answered, primary: !held && !!answered },
-    { href: "/buyer/verify", Icon: Search, title: "Verify a supplier", note: "Check any order step by step" },
-    { href: "/buyer/factories", Icon: Factory, title: "Your factories", note: "Linked suppliers and invites", count: factories },
+  // Only the one most useful job gets the big button; everything else is a quiet link below.
+  const next: NextUpTask = held
+    ? {
+        Icon: ShieldAlert,
+        tone: "bad",
+        title: `${held} ${t(held === 1 ? "order is on hold" : "orders are on hold")}`,
+        note: t("A supplier certificate has expired. See which one and who must renew it."),
+        action: "See orders on hold",
+        href: "/reports",
+      }
+    : factories === 0
+      ? { Icon: Factory, title: t("Link your first factory"), note: t("Accept a factory's invite, or send one, to see its answers here."), action: "Link a factory", href: "/buyer/factories" }
+      : answered
+        ? {
+            Icon: MessageSquareText,
+            title: `${answered} ${t(answered === 1 ? "answer from your factories" : "answers from your factories")}`,
+            note: t("Each one shows the sentence it came from."),
+            action: "Read answers",
+            href: "/buyer/questions",
+          }
+        : all.length === 0 && questions
+          ? { Icon: MessageSquarePlus, title: t("Ask your factories a question"), note: t("Send a questionnaire. Each answer comes back with its source."), action: "Send a questionnaire", href: "/buyer/questions/new" }
+          : waiting
+            ? { Icon: MessageSquareText, calm: true, title: `${t("Waiting for")} ${waiting} ${t(waiting === 1 ? "answer" : "answers")}`, note: t("Your factories are working on them."), action: "See your questionnaires", href: "/buyer/questions" }
+            : { Icon: ShieldCheck, calm: true, title: t("Everything is in date"), note: t("Every supplier certificate on your orders is valid."), action: "Verify a supplier", href: "/buyer/verify" };
+
+  const links: QuickLink[] = [
+    { href: "/buyer/questions", Icon: MessageSquareText, label: "Answers", count: questions ? answered : undefined },
+    { href: "/reports", Icon: Package, label: "Orders", count: orders.length },
+    { href: "/buyer/factories", Icon: Factory, label: "Factories", count: factories },
+    { href: "/buyer/verify", Icon: Search, label: "Verify" },
+    { href: "/ledger", Icon: History, label: "Activity log" },
   ];
 
   return (
@@ -43,32 +65,8 @@ export default function BuyerDashboard() {
         <DashboardHeader eyebrow="Buyer dashboard" title={session?.organization ?? "Your suppliers"}>
           <DemoDataBadge />
         </DashboardHeader>
-
-        <NextSteps steps={steps} />
-
-        <div className="grid gap-8 lg:grid-cols-2">
-          <Panel title="Your suppliers">
-            <ul className="divide-y divide-line">
-              {suppliers.map((s) => (
-                <li key={s.name}>
-                  <RowLink href={`/buyer/verify?factory=${encodeURIComponent(s.name)}`} label={`${t("Verify")} ${s.name}`}>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-ink">{s.name}</span>
-                      <span className="block text-sm text-ink-muted tabular-nums">
-                        {s.orders} {t(s.orders === 1 ? "order" : "orders")}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <StatusBadge tone={s.held ? "bad" : "ok"}>{s.held ? `${s.held} ${t("on hold")}` : t("All in date")}</StatusBadge>
-                      <span className="text-sm font-semibold text-brand">{t("Verify")}</span>
-                    </span>
-                  </RowLink>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-          <RecentActivity types={["BUYER AUDIT VERIFICATION", "BUYER QUERY"]} empty="You haven't verified a supplier yet." />
-        </div>
+        <NextUp task={next} />
+        <QuickLinks links={links} />
       </main>
     </div>
   );

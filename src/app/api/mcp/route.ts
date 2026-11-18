@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
     case "tools/list":
       return rpcResult(body.id, { tools: TOOLS_MANIFEST });
     case "tools/call": {
-      if (!getSession(req)) {
+      if (!(await getSession(req))) {
         return rpcError(body.id, -32001, "Sign in to Bunon before calling tools.", 401);
       }
       const name = typeof body.params?.name === "string" ? body.params.name : "";

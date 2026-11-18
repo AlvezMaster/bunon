@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/auth/session — the signed-in user (from the httpOnly cookie), or null. */
 export async function GET(req: NextRequest) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ user: null });
   try {
     const { user } = await findUserByEmail(session.email);

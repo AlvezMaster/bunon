@@ -28,7 +28,7 @@ async function pdfText(bytes: Uint8Array): Promise<string> {
 
 /** GET /api/documents: this factory's documents, and whether meaning search is on. */
 export async function GET(req: NextRequest) {
-  const guard = requireSession(req, ["factory"]);
+  const guard = await requireSession(req, ["factory"]);
   if (!guard.ok) return guard.response;
   const scope = await scopeFor(guard.session);
   return NextResponse.json({ documents: await listDocuments(scope.orgId), embedModel: await embeddingModel(), maxDocuments: MAX_DOCUMENTS });
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
  *   JSON: { action: "delete", id }
  */
 export async function POST(req: NextRequest) {
-  const guard = requireSession(req, ["factory"]);
+  const guard = await requireSession(req, ["factory"]);
   if (!guard.ok) return guard.response;
   const scope = await scopeFor(guard.session);
   const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });

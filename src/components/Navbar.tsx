@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { ChevronDown, LogIn, LogOut, CreditCard } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, CreditCard, UserRound } from "lucide-react";
 import { useBunonStore, type UserRole } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { PreferenceToggles } from "@/components/Preferences";
@@ -237,11 +237,19 @@ export default function Navbar() {
                         <PreferenceToggles />
                       </div>
                       <div className="border-t border-ink/[0.06] pt-1">
+                        <Link
+                          href="/account"
+                          role="menuitem"
+                          className="flex h-11 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
+                        >
+                          <UserRound className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                          {t("Account")}
+                        </Link>
                         {session.role === "factory" && (
                           <Link
                             href="/factory/billing"
                             role="menuitem"
-                            className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
+                            className="flex h-11 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
                           >
                             <CreditCard className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                             {t("Plan and billing")}
@@ -252,7 +260,7 @@ export default function Navbar() {
                           role="menuitem"
                           onClick={handleSignOut}
                           disabled={signingOut}
-                          className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
+                          className="flex h-11 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
                         >
                           <LogOut className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                           {t(signingOut ? "Signing out…" : "Sign out")}
