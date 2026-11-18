@@ -131,14 +131,15 @@ export default function HomePage() {
         {/* Who it's for: two doors */}
         <section id="who-its-for" aria-labelledby="who-title" className="scroll-mt-20 border-y border-line bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-            <h2 id="who-title" className={`scroll-reveal ${H2}`}>
-              {t("Two sides, one source of truth.")}
+            <p className="section-index scroll-reveal">{t("Who it's for")}</p>
+            <h2 id="who-title" className={`scroll-reveal mt-3 ${H2}`}>
+              {t("For garment factories, and the brands that buy from them.")}
             </h2>
             <div className="mt-12 grid gap-5 md:grid-cols-2">
               {[
-                { Icon: Building2, title: "Factories", line: "Answer each question once, from your own documents.", href: "/signup/factory", cta: "Register a factory" },
-                { Icon: ShoppingBag, title: "Buyers", line: "Get every answer with its source. Always free.", href: "/signup", cta: "Create a buyer account" },
-              ].map(({ Icon, title, line, href, cta }, i) => (
+                { Icon: Building2, title: "Factories", who: "Owners and compliance teams at export garment factories in Bangladesh.", line: "Answer each question once, from your own documents.", href: "/signup/factory", cta: "Register a factory" },
+                { Icon: ShoppingBag, title: "Buyers", who: "Sourcing and compliance teams at brands and retailers, many in the EU.", line: "Get every answer with its source. Always free.", href: "/signup", cta: "Create a buyer account" },
+              ].map(({ Icon, title, who, line, href, cta }, i) => (
                 <Link
                   key={title}
                   href={href}
@@ -150,7 +151,8 @@ export default function HomePage() {
                   </span>
                   <span className="space-y-2">
                     <span className="block font-display text-3xl font-semibold text-ink">{t(title)}</span>
-                    <span className="block text-base text-ink-muted">{t(line)}</span>
+                    <span className="block text-sm font-medium text-ink-faint">{t(who)}</span>
+                    <span className="block text-base text-ink">{t(line)}</span>
                   </span>
                   <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                     {t(cta)}
@@ -176,7 +178,11 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <div className="scroll-reveal mt-10 flex flex-wrap items-center gap-2">
+          <Link href="/about" className="scroll-reveal mt-8 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+            {t("More about us")}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+          <div className="scroll-reveal mt-6 flex flex-wrap items-center gap-2">
             <span className="mr-1 text-sm font-semibold text-ink">{t("Working today:")}</span>
             {WORKING.map((w) => (
               <span key={w} className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-sm text-success">

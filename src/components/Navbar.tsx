@@ -16,7 +16,7 @@ type NavLink = { href: string; label: string; match?: string; exact?: boolean; a
 const PUBLIC_LINKS: NavLink[] = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#who-its-for", label: "Who it's for" },
-  { href: "/#about", label: "About us" },
+  { href: "/about", label: "About us" },
   { href: "/pricing", label: "Pricing" },
 ];
 
