@@ -2,7 +2,7 @@
 
 import type React from "react";
 import Link from "next/link";
-import { ArrowRight, Building2, Check, Languages, Quote, Repeat2, ShoppingBag, UserCheck } from "lucide-react";
+import { ArrowRight, Building2, Check, ChevronDown, Languages, Quote, Repeat2, ShoppingBag, UserCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HowItWorks from "@/components/home/HowItWorks";
 import CountUp from "@/components/home/CountUp";
@@ -54,33 +54,53 @@ export default function HomePage() {
       <Navbar />
 
       <main className="flex-1 overflow-x-clip">
-        {/* Hero: one promise, one line, one picture */}
-        <section className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-24 pt-16 sm:px-6 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1.05fr_0.95fr] lg:pt-10">
-          <div className="scroll-drift space-y-7">
+        {/* Hero: the promise, filling the first screen */}
+        <section className="relative flex min-h-[calc(100svh-4rem)] flex-col justify-center px-4 pb-24 pt-12 sm:px-6">
+          <div className="mx-auto w-full max-w-7xl">
             <p className="rise inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-brand">
               {t("Compliance for Bangladesh’s garment factories")}
             </p>
-            <h1 className="hero-title rise" style={{ animationDelay: "60ms" }}>
+            <h1 className="hero-giant rise mt-6" style={{ animationDelay: "60ms" }}>
               {t("Answer every buyer")} <em className="scroll-slide italic text-brand">{t("once")}</em>.
             </h1>
-            <p className="rise max-w-[44ch] text-lg leading-relaxed text-ink-muted" style={{ animationDelay: "120ms" }}>
-              {t("Your documents become sourced answers for every buyer. A person approves each one.")}
-            </p>
-            <div className="rise flex flex-col gap-3 sm:flex-row" style={{ animationDelay: "180ms" }}>
-              <Link href="/login" className="btn-primary-action min-h-[52px] px-7 text-base">
-                {t("Try the demo")}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-              <Link href="/pricing" className="btn-tactile-hollow inline-flex min-h-[52px] items-center justify-center px-7 text-base font-semibold">
-                {t("See plans")}
-              </Link>
+            <div className="rise mt-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between" style={{ animationDelay: "160ms" }}>
+              <p className="max-w-[46ch] text-lg leading-relaxed text-ink-muted sm:text-xl">
+                {t("Your documents become sourced answers for every buyer. A person approves each one.")}
+              </p>
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                <Link href="/login" className="btn-primary-action min-h-[52px] px-7 text-base">
+                  {t("Try the demo")}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+                <Link href="/pricing" className="btn-tactile-hollow inline-flex min-h-[52px] items-center justify-center px-7 text-base font-semibold">
+                  {t("See plans")}
+                </Link>
+              </div>
             </div>
           </div>
+          <a
+            href="#one-answer"
+            className="rise absolute bottom-6 left-1/2 hidden min-h-[44px] -translate-x-1/2 items-center gap-2 rounded-full px-4 text-sm font-medium text-ink-muted hover:text-ink sm:inline-flex"
+            style={{ animationDelay: "400ms" }}
+          >
+            {t("How it works")}
+            <ChevronDown className="nudge-down h-4 w-4" aria-hidden="true" />
+          </a>
+        </section>
 
-          {/* The product in one glance: a buyer's question answered, and the next buyer's ready from it */}
-          <div className="scroll-parallax relative mx-auto w-full max-w-[460px]" aria-hidden="true">
+        {/* The product in one glance: a buyer's question answered, and the next buyer's ready from it */}
+        <section id="one-answer" aria-labelledby="one-answer-title" className="mx-auto grid max-w-6xl scroll-mt-20 items-center gap-14 px-4 py-24 sm:px-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <h2 id="one-answer-title" className={`scroll-reveal ${H2}`}>
+              {t("One answer, ready for every buyer.")}
+            </h2>
+            <p className="scroll-reveal max-w-[44ch] text-lg leading-relaxed text-ink-muted">
+              {t("When the next buyer asks the same thing in other words, your earlier answer is ready. Check it and send.")}
+            </p>
+          </div>
+          <div className="scroll-scale-in relative mx-auto w-full max-w-[460px]" aria-hidden="true">
             <div className="absolute inset-0 -z-10 translate-y-6 scale-110 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-accent)_22%,transparent),transparent)] blur-2xl" />
-            <div className="rise float-soft rounded-2xl border border-line bg-surface p-6 shadow-[0_2px_4px_rgba(20,23,26,0.05),0_30px_60px_-30px_rgba(30,58,95,0.45)]" style={{ animationDelay: "200ms" }}>
+            <div className="float-soft rounded-2xl border border-line bg-surface p-6 shadow-[0_2px_4px_rgba(20,23,26,0.05),0_30px_60px_-30px_rgba(30,58,95,0.45)]">
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint">{t("Nordlys Apparel asks")}</p>
               <p className="mt-1.5 font-display text-2xl text-ink">{t("Is overtime voluntary?")}</p>
               <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-ink">
@@ -92,7 +112,7 @@ export default function HomePage() {
               <p className="mt-3 border-l-2 border-success pl-3 text-[15px] italic text-ink-muted">“{t("Overtime is voluntary and is limited to 2 hours per day.")}”</p>
               <p className="mt-3 text-xs text-ink-faint">{t("From Working hours policy · approved by a person")}</p>
             </div>
-            <div className="rise relative -mt-3 ml-8 mr-[-8px] rounded-2xl border border-brand/30 bg-brand-soft p-4 shadow-[0_20px_40px_-28px_rgba(30,58,95,0.5)]" style={{ animationDelay: "320ms" }}>
+            <div className="relative -mt-3 ml-8 mr-[-8px] rounded-2xl border border-brand/30 bg-brand-soft p-4 shadow-[0_20px_40px_-28px_rgba(30,58,95,0.5)]">
               <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <Repeat2 className="h-4 w-4 text-brand" />
                 {t("Vela Outfitters asks the same thing")}

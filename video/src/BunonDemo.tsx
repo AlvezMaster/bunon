@@ -14,19 +14,17 @@ export type DemoProps = {
   voiceover: boolean;
 };
 
-type Sfx = { at: number; file: "click" | "pop" | "whoosh" | "swipe"; volume: number };
+type Sfx = { at: number; file: "click" | "pop" | "whoosh"; volume: number };
 
 const isScreen = (l?: TimedLine): l is TimedLine & { visual: ScreenVisual } => l?.visual.kind === "screen";
 
-/** Every sound effect: a whoosh per segment, a swipe per new scene, a click per cursor click, a pop per label. */
+/** Sound effects, kept sparse: a soft whoosh per segment, a click per cursor click, a quiet pop per label. */
 function effects(lines: TimedLine[], segments: Array<{ from: number }>): Sfx[] {
-  const out: Sfx[] = segments.map((s) => ({ at: s.from, file: "whoosh", volume: 0.42 }));
-  const starts = new Set(segments.map((s) => s.from));
-  lines.forEach((l, i) => {
-    if (!starts.has(l.from)) out.push({ at: l.from, file: "swipe", volume: isScreen(l) && isScreen(lines[i - 1]) ? 0.3 : 0.16 });
+  const out: Sfx[] = segments.map((s) => ({ at: s.from, file: "whoosh", volume: 0.28 }));
+  lines.forEach((l) => {
     if (!isScreen(l)) return;
-    for (const t of l.visual.clicks ?? []) out.push({ at: l.from + Math.round(t * l.duration) - 1, file: "click", volume: 0.75 });
-    for (const c of l.visual.callouts ?? []) out.push({ at: l.from + Math.round(c.t * l.duration), file: "pop", volume: 0.22 });
+    for (const t of l.visual.clicks ?? []) out.push({ at: l.from + Math.round(t * l.duration) - 1, file: "click", volume: 0.6 });
+    for (const c of l.visual.callouts ?? []) out.push({ at: l.from + Math.round(c.t * l.duration), file: "pop", volume: 0.14 });
   });
   return out;
 }

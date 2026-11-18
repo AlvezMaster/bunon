@@ -7,7 +7,7 @@ const rnd = (i: number) => {
   const x = Math.sin(i * 127.1 + 311.7) * 43758.5453;
   return x - Math.floor(x);
 };
-const PARTICLES = Array.from({ length: 46 }, (_, i) => ({
+const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   x: rnd(i) * 1920,
   y: rnd(i + 100) * 1080,
   r: 1.2 + rnd(i + 200) * 2.4,
@@ -33,7 +33,7 @@ export const BgMesh: React.FC = () => {
       {/* woven threads */}
       <AbsoluteFill
         style={{
-          opacity: 0.07,
+          opacity: 0.045,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(231,234,246,0.9) 0 1px, transparent 1px 72px), repeating-linear-gradient(90deg, rgba(231,234,246,0.9) 0 1px, transparent 1px 72px)",
           backgroundPosition: `${(frame * 0.35) % 72}px ${(frame * 0.2) % 72}px`,
@@ -41,23 +41,6 @@ export const BgMesh: React.FC = () => {
           WebkitMaskImage: "radial-gradient(ellipse at center, black 20%, transparent 75%)",
         }}
       />
-      {[216, 504, 792].map((y, i) => {
-        const x = ((frame * (5 + i * 2) + i * 700) % 2600) - 340;
-        return (
-          <div
-            key={y}
-            style={{
-              position: "absolute",
-              top: y + ((frame * 0.2) % 72),
-              left: x,
-              width: 340,
-              height: 1,
-              background: `linear-gradient(90deg, transparent, ${i === 1 ? theme.colors.primary : theme.colors.accent}, transparent)`,
-              opacity: 0.55,
-            }}
-          />
-        );
-      })}
       {PARTICLES.map((pt, i) => {
         const y = (((pt.y - frame * pt.speed) % 1080) + 1080) % 1080;
         const x = pt.x + Math.sin(frame / 60 + pt.phase) * 24;
@@ -73,8 +56,7 @@ export const BgMesh: React.FC = () => {
               height: pt.r * 2,
               borderRadius: "50%",
               background: pt.warm ? theme.colors.primary : theme.colors.text,
-              opacity: 0.32 * tw,
-              boxShadow: pt.warm ? `0 0 8px ${theme.colors.glow}` : undefined,
+              opacity: 0.2 * tw,
             }}
           />
         );
@@ -83,10 +65,9 @@ export const BgMesh: React.FC = () => {
   );
 };
 
-/** A segment change: a light sweep across the frame and the segment number as giant outlined type behind. */
+/** A segment change: the segment number as faint, giant outlined type behind, for a moment. */
 export const SegmentSweep: React.FC<{ index: number }> = ({ index }) => {
   const frame = useCurrentFrame();
-  const sweep = interpolate(frame, [0, 26], [-0.5, 1.5], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: theme.ease.inOut });
   const ghostIn = interpolate(frame, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: theme.ease.out });
   const ghostOut = interpolate(frame, [40, 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: theme.ease.in });
   return (
@@ -101,27 +82,13 @@ export const SegmentSweep: React.FC<{ index: number }> = ({ index }) => {
           fontWeight: 600,
           lineHeight: 1,
           color: "transparent",
-          WebkitTextStroke: "2px rgba(231,234,246,0.16)",
+          WebkitTextStroke: "1.5px rgba(231,234,246,0.08)",
           opacity: ghostIn * (1 - ghostOut),
           letterSpacing: "-0.04em",
         }}
       >
         {String(index + 1).padStart(2, "0")}
       </div>
-      {frame < 28 && (
-        <div
-          style={{
-            position: "absolute",
-            top: -200,
-            bottom: -200,
-            left: `${sweep * 100}%`,
-            width: 420,
-            transform: "skewX(-18deg)",
-            background: "linear-gradient(90deg, transparent, rgba(255,154,92,0.16), rgba(163,177,255,0.28), transparent)",
-            mixBlendMode: "screen",
-          }}
-        />
-      )}
     </AbsoluteFill>
   );
 };

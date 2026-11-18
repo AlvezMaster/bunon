@@ -126,6 +126,27 @@ p {
   color: var(--color-ink);
 }
 
+/* Home hero: the promise, as big as the screen allows. */
+.hero-giant {
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 10vw, 10.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nudge-down {
+    animation: nudge-down 1.8s var(--ease-out) infinite;
+  }
+}
+@keyframes nudge-down {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
 .hero-title {
   font-family: var(--font-display);
   font-size: clamp(2.5rem, 4vw + 1rem, 4rem);

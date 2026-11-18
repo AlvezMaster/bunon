@@ -11,7 +11,7 @@ const BAR = 46;
 const VIEW_H = Math.round((WIN_W * 900) / PAGE_W);
 const S0 = WIN_W / PAGE_W;
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const WIPE = 14; // frames for one page to push the last one out
+const FADE = 24; // frames for one page to dissolve into the next
 
 type Cam = { x: number; y: number; z: number };
 const DEFAULT_CAM: NonNullable<ScreenVisual["cam"]> = [
@@ -72,7 +72,7 @@ const ROLE_TINT: Record<Role, string> = { Buyer: "rgba(163,177,255,0.18)", Facto
 /**
  * A live-looking product screen: the camera glides and zooms over the real page, a cursor moves and clicks,
  * the page changes after a click, and short labels pop out of the UI. Consecutive screens in a segment share
- * one window: the new page pushes the old one out instead of the whole window leaving.
+ * one window: the new page dissolves in over the old one instead of the whole window leaving.
  */
 export const Screen: React.FC<{ v: ScreenVisual; dur: number; absFrom: number; joinPrev?: ScreenVisual; joinNext?: boolean }> = ({ v, dur, absFrom, joinPrev, joinNext }) => {
   const frame = useCurrentFrame();
@@ -89,13 +89,13 @@ export const Screen: React.FC<{ v: ScreenVisual; dur: number; absFrom: number; j
   const prevSrc = cur.i > 0 ? v.frames[cur.i - 1][1] : null;
   const { toScreen, s } = place(cam, pageHeight(src));
 
-  // Window in / out (skipped when the neighbouring line is a screen too).
+  // Window in / out (skipped when the neighbouring line is a screen too: then the pages dissolve).
   const enter = joinPrev ? 1 : spring({ frame, fps, config: theme.spring.smooth });
   const exit = joinNext ? 0 : interpolate(frame, [dur - 10, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
   const rotX = (1 - enter) * 16 + 1.4 + Math.sin(g / 95) * 0.7;
   const rotY = Math.sin(g / 120) * 1.5;
   const lift = (1 - enter) * 140 + Math.sin(g / 70) * 4 - exit * 30;
-  const wipe = joinPrev ? interpolate(frame, [0, WIPE], [0, 1], { ...clamp, easing: theme.ease.out }) : 1;
+  const fade = joinPrev ? interpolate(frame, [0, FADE], [0, 1], { ...clamp, easing: theme.ease.inOut }) : 1;
 
   // URL types itself whenever it changes.
   const urlStart = cur.i > 0 && cur.f[2] ? swapAt : joinPrev && joinPrev.url === url ? -999 : 0;
@@ -168,20 +168,13 @@ export const Screen: React.FC<{ v: ScreenVisual; dur: number; absFrom: number; j
 
         {/* page */}
         <div style={{ position: "relative", width: WIN_W, height: VIEW_H, overflow: "hidden", background: C.paper }}>
-          {joinPrev && wipe < 1 && (
-            <Page
-              src={joinPrev.frames[joinPrev.frames.length - 1][1]}
-              cam={camAt(joinPrev, 1)}
-              style={{ transform: `translateX(${-wipe * 160}px)`, opacity: 1 - wipe * 0.5 }}
-            />
-          )}
+          {joinPrev && fade < 1 && <Page src={joinPrev.frames[joinPrev.frames.length - 1][1]} cam={camAt(joinPrev, 1)} style={{ opacity: 1 - fade }} />}
           <div
             style={{
               position: "absolute",
               inset: 0,
-              clipPath: wipe < 1 ? `inset(0 0 0 ${(1 - wipe) * 100}%)` : undefined,
-              transform: wipe < 1 ? `translateX(${(1 - wipe) * 60}px)` : undefined,
-              boxShadow: wipe < 1 ? "-30px 0 60px rgba(0,0,0,0.25)" : undefined,
+              opacity: fade,
+              transform: fade < 1 ? `translateY(${(1 - fade) * 10}px) scale(${1 + (1 - fade) * 0.008})` : undefined,
             }}
           >
             {prevSrc && sinceSwap < 6 && <Page src={prevSrc} cam={cam} />}

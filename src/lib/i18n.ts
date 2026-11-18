@@ -566,6 +566,8 @@ const BN: Record<string, string> = {
   "Owners and compliance teams at export garment factories in Bangladesh.": "বাংলাদেশের রপ্তানিমুখী পোশাক কারখানার মালিক ও কমপ্লায়েন্স দল।",
   "Sourcing and compliance teams at brands and retailers, many in the EU.": "ব্র্যান্ড ও খুচরা বিক্রেতাদের সোর্সিং ও কমপ্লায়েন্স দল, অনেকেই ইউরোপীয় ইউনিয়নে।",
   "More about us": "আমাদের সম্পর্কে আরও",
+  "One answer, ready for every buyer.": "একটি উত্তর, প্রতিটি ক্রেতার জন্য প্রস্তুত।",
+  "When the next buyer asks the same thing in other words, your earlier answer is ready. Check it and send.": "পরের ক্রেতা অন্য ভাষায় একই প্রশ্ন করলে আপনার আগের উত্তর প্রস্তুত থাকে। দেখে নিয়ে পাঠান।",
   // Sign-in and sign-up
   "weaving": "বয়ন",
   "Question from your buyer": "ক্রেতার প্রশ্ন",

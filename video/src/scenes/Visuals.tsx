@@ -58,62 +58,27 @@ const Rings: React.FC<{ size: number; color?: string; count?: number; period?: n
 
 // ---------------------------------------------------------------------------- About us and who it's for
 
-/** Threads that weave in: Bunon means "weaving" in Bangla. */
-const Weave: React.FC<{ dur: number }> = ({ dur }) => {
-  const frame = useCurrentFrame();
-  const out = interpolate(frame, [dur - 11, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const W = 1500;
-  const H = 760;
-  const cols = 15;
-  const rows = 8;
-  return (
-    <svg width={W} height={H} style={{ position: "absolute", left: (1920 - W) / 2, top: 110, opacity: 0.5 * (1 - out) }}>
-      {Array.from({ length: cols }).map((_, i) => {
-        const x = (i + 0.5) * (W / cols);
-        const p = interpolate(frame, [i * 1.5, i * 1.5 + 30], [0, 1], { ...clamp, easing: theme.ease.out });
-        return <line key={`v${i}`} x1={x} y1={0} x2={x} y2={H} stroke={C.accent} strokeOpacity={0.35} strokeWidth={3} strokeDasharray={H} strokeDashoffset={H * (1 - p)} />;
-      })}
-      {Array.from({ length: rows }).map((_, j) => {
-        const y = (j + 0.5) * (H / rows);
-        const p = interpolate(frame, [8 + j * 3, 8 + j * 3 + 36], [0, 1], { ...clamp, easing: theme.ease.out });
-        // Over-under: the horizontal thread hides where it passes under every other vertical one.
-        const gaps = Array.from({ length: cols }).map((_, i) => ((i + j) % 2 === 0 ? (i + 0.5) * (W / cols) : null)).filter((g): g is number => g !== null);
-        return (
-          <g key={`h${j}`}>
-            <line x1={0} y1={y} x2={W * p} y2={y} stroke={j % 3 === 1 ? C.primary : C.text} strokeOpacity={j % 3 === 1 ? 0.55 : 0.22} strokeWidth={3} />
-            {gaps.map((gx) => (gx < W * p ? <rect key={gx} x={gx - 6} y={y - 4} width={12} height={8} fill={C.bg} /> : null))}
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
-
 const About: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const logo = spring({ frame: frame - 4, fps, config: theme.spring.bouncy });
+  const logo = spring({ frame: frame - 2, fps, config: theme.spring.smooth });
   const out = interpolate(frame, [dur - 11, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const b = useBreathe(26, 0.01);
+  const line = interpolate(frame, [18, 48], [0, 1], { ...clamp, easing: theme.ease.out });
   return (
-    <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 26 }}>
-      <Weave dur={dur} />
-      <div style={{ position: "relative", transform: `scale(${(0.6 + 0.4 * logo) * b.scale})`, opacity: logo * (1 - out), filter: `drop-shadow(0 0 40px ${C.glow})` }}>
-        <Rings size={190} />
-        <Logo size={130} />
+    <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 30 }}>
+      <div style={{ opacity: logo * (1 - out), transform: `translateY(${(1 - logo) * 16}px)` }}>
+        <Logo size={92} />
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 28 }}>
-        <WordReveal text="We're Bunon." delay={8} dur={dur} gap={26} style={{ fontFamily: fonts.display, fontSize: 132, fontWeight: 600, letterSpacing: "-0.035em", color: C.text }} />
-        <Rise delay={18} dur={dur} distance={30}>
-          <span style={{ fontFamily: fonts.body, fontSize: 84, fontWeight: 600, color: C.primary, textShadow: `0 0 40px ${C.glow}` }}>বুনন</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 30 }}>
+        <WordReveal text="We're Bunon." delay={6} dur={dur} gap={26} style={{ fontFamily: fonts.display, fontSize: 128, fontWeight: 600, letterSpacing: "-0.035em", color: C.text }} />
+        <Rise delay={14} dur={dur} distance={14}>
+          <span style={{ fontFamily: fonts.body, fontSize: 76, fontWeight: 500, color: C.primary }}>বুনন</span>
         </Rise>
       </div>
-      <Rise delay={24} dur={dur} distance={24}>
-        <span style={{ fontFamily: fonts.mono, fontSize: 22, letterSpacing: "0.14em", color: C.textDim, textTransform: "uppercase" }}>“Bunon” means weaving</span>
-      </Rise>
-      <Rise delay={30} dur={dur} distance={24}>
-        <span style={{ ...glass, borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 14, padding: "16px 30px", fontFamily: fonts.body, fontSize: 36, fontWeight: 500, color: C.text }}>
-          <Icon name="pin" size={34} color={C.primary} />A small team in Dhaka, Bangladesh
+      <div style={{ width: 360 * line, height: 1, background: "rgba(231,234,246,0.28)", opacity: 1 - out }} />
+      <Rise delay={22} dur={dur} distance={12}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 12, fontFamily: fonts.body, fontSize: 34, color: C.textDim }}>
+          <Icon name="pin" size={28} color={C.textDim} />A small team in Dhaka, Bangladesh
         </span>
       </Rise>
     </AbsoluteFill>
@@ -220,73 +185,25 @@ const Audience: React.FC<{ dur: number }> = ({ dur }) => {
 
 const Stat: React.FC<{ v: Extract<Visual, { kind: "stat" }>; dur: number }> = ({ v, dur }) => {
   const frame = useCurrentFrame();
-  const b = useBreathe();
   const out = interpolate(frame, [dur - 11, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const bar = interpolate(frame, [10, 40], [0, 1], { ...clamp, easing: theme.ease.out });
-  const burstAge = frame - 34;
-  const ghost = `${v.prefix ?? ""}${v.format === "int" ? v.value.toLocaleString("en-US") : v.value}${v.suffix ?? ""}`;
+  const bar = interpolate(frame, [12, 46], [0, 1], { ...clamp, easing: theme.ease.out });
   return (
     <AbsoluteFill style={center}>
-      {/* the number again, huge and outlined, drifting behind */}
-      <div
-        style={{
-          position: "absolute",
-          top: 60,
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          fontFamily: fonts.display,
-          fontSize: 560,
-          fontWeight: 600,
-          letterSpacing: "-0.05em",
-          lineHeight: 1,
-          color: "transparent",
-          WebkitTextStroke: "2px rgba(163,177,255,0.12)",
-          transform: `translateX(${interpolate(frame, [0, dur], [80, -80])}px)`,
-          opacity: 1 - out,
-        }}
-      >
-        {ghost}
-      </div>
-      <Rise dur={dur} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-        <div style={{ position: "relative", transform: `scale(${b.scale})` }}>
-          <Counter
-            to={v.value}
-            delay={6}
-            format={v.format}
-            prefix={v.prefix}
-            suffix={v.suffix}
-            style={{ fontFamily: fonts.display, fontSize: 260, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1, color: C.primary, textShadow: `0 0 80px ${C.glow}` }}
-          />
-          {burstAge >= 0 &&
-            burstAge < 26 &&
-            Array.from({ length: 14 }).map((_, i) => {
-              const a = (i / 14) * Math.PI * 2;
-              const r = 120 + burstAge * 11;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: "50%",
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    background: i % 2 ? C.primary : C.accent,
-                    opacity: 1 - burstAge / 26,
-                    transform: `translate(${Math.cos(a) * r * 1.6}px, ${Math.sin(a) * r * 0.7}px)`,
-                  }}
-                />
-              );
-            })}
-        </div>
-        <div style={{ width: 520 * bar, height: 4, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${C.primary}, transparent)` }} />
-        <WordReveal text={v.label} delay={14} dur={dur} gap={14} style={{ fontFamily: fonts.body, fontSize: 48, fontWeight: 500, color: C.text, justifyContent: "center", maxWidth: 1300 }} />
+      <Rise dur={dur} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
+        <Counter
+          to={v.value}
+          delay={6}
+          format={v.format}
+          prefix={v.prefix}
+          suffix={v.suffix}
+          style={{ fontFamily: fonts.display, fontSize: 250, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1, color: C.primary, textShadow: "0 0 50px rgba(255,154,92,0.18)" }}
+        />
+        <div style={{ width: 240 * bar, height: 1, background: "rgba(231,234,246,0.35)", opacity: 1 - out }} />
+        <WordReveal text={v.label} delay={14} dur={dur} gap={14} style={{ fontFamily: fonts.body, fontSize: 46, fontWeight: 500, color: C.text, justifyContent: "center", maxWidth: 1300 }} />
       </Rise>
       {v.source && (
         <div style={{ position: "absolute", right: 72, bottom: 132 }}>
-          <Rise dur={dur} delay={24} distance={16}>
+          <Rise dur={dur} delay={24} distance={12}>
             <span style={{ fontFamily: fonts.mono, fontSize: 18, color: C.textDim, letterSpacing: "0.04em" }}>Source: {v.source}</span>
           </Rise>
         </div>
@@ -300,16 +217,14 @@ const Cards: React.FC<{ dur: number }> = ({ dur }) => {
   const { fps } = useVideoConfig();
   const exit = interpolate(frame, [dur - 11, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
   const n = 6;
-  const badge = spring({ frame: frame - 34, fps, config: theme.spring.bouncy });
   return (
     <AbsoluteFill style={center}>
       <div style={{ position: "relative", width: 1500, height: 560 }}>
         {Array.from({ length: n }).map((_, i) => {
-          const p = spring({ frame: frame - 2 - i * 4, fps, config: theme.spring.smooth });
-          const angle = (i - (n - 1) / 2) * 7;
+          const p = spring({ frame: frame - 4 - i * 5, fps, config: theme.spring.smooth });
+          const angle = (i - (n - 1) / 2) * 5;
           const x = (i - (n - 1) / 2) * 200;
-          const float = Math.sin((frame + i * 9) / 26) * 6;
-          const fromX = (i % 2 ? 1 : -1) * 700;
+          const float = Math.sin((frame + i * 9) / 30) * 3;
           return (
             <div
               key={i}
@@ -322,8 +237,8 @@ const Cards: React.FC<{ dur: number }> = ({ dur }) => {
                 height: 400,
                 padding: 26,
                 background: "rgba(19,26,51,0.92)",
-                opacity: Math.min(1, p * 1.4) * (1 - exit),
-                transform: `translate(${fromX * (1 - p)}px, ${interpolate(p, [0, 1], [260, 0]) + float - exit * 30}px) rotate(${angle * p + (1 - p) * (i % 2 ? 40 : -40)}deg)`,
+                opacity: p * (1 - exit),
+                transform: `translateY(${interpolate(p, [0, 1], [90, 0]) + float - exit * 24}px) rotate(${angle * p}deg)`,
                 display: "flex",
                 flexDirection: "column",
                 gap: 16,
@@ -340,25 +255,6 @@ const Cards: React.FC<{ dur: number }> = ({ dur }) => {
             </div>
           );
         })}
-        <div
-          style={{
-            position: "absolute",
-            right: 70,
-            top: 0,
-            padding: "14px 26px",
-            borderRadius: 999,
-            background: C.primary,
-            color: "#0B1020",
-            fontFamily: fonts.body,
-            fontSize: 30,
-            fontWeight: 700,
-            opacity: badge * (1 - exit),
-            transform: `scale(${badge}) rotate(${(1 - badge) * -20 + 6}deg)`,
-            boxShadow: `0 0 50px ${C.glow}`,
-          }}
-        >
-          Same questions, every time
-        </div>
       </div>
     </AbsoluteFill>
   );
@@ -366,43 +262,23 @@ const Cards: React.FC<{ dur: number }> = ({ dur }) => {
 
 const Chips: React.FC<{ v: Extract<Visual, { kind: "chips" }>; dur: number }> = ({ v, dur }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const out = interpolate(frame, [dur - 11, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const line = interpolate(frame, [8, 30], [0, 1], { ...clamp, easing: theme.ease.out });
+  const line = interpolate(frame, [10, 40], [0, 1], { ...clamp, easing: theme.ease.out });
   return (
-    <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 54 }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-        <WordReveal text={v.title} dur={dur} gap={22} style={{ fontFamily: fonts.display, fontSize: 92, fontWeight: 600, letterSpacing: "-0.03em", color: C.text, justifyContent: "center", maxWidth: 1500 }} />
-        <div style={{ width: 300 * line, height: 4, borderRadius: 2, background: C.primary, opacity: 1 - out, boxShadow: `0 0 20px ${C.glow}` }} />
+    <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 50 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+        <WordReveal text={v.title} dur={dur} gap={22} style={{ fontFamily: fonts.display, fontSize: 88, fontWeight: 600, letterSpacing: "-0.03em", color: C.text, justifyContent: "center", maxWidth: 1500 }} />
+        <div style={{ width: 200 * line, height: 2, borderRadius: 1, background: C.primary, opacity: 1 - out }} />
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 20, maxWidth: 1500 }}>
-        {v.items.map((item, i) => {
-          const p = spring({ frame: frame - 12 - i * 4, fps, config: theme.spring.bouncy });
-          const dir = i % 2 ? 1 : -1;
-          const bob = Math.sin((frame + i * 13) / 22) * 3;
-          return (
-            <span
-              key={item}
-              style={{
-                ...glass,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 14,
-                borderRadius: 999,
-                padding: "18px 32px",
-                fontFamily: fonts.body,
-                fontSize: 38,
-                fontWeight: 500,
-                color: C.text,
-                opacity: Math.min(1, p) * (1 - out),
-                transform: `translate(${dir * (1 - p) * 220}px, ${(1 - p) * 40 + bob - out * 20}px) rotate(${dir * (1 - p) * 12}deg)`,
-              }}
-            >
-              <span style={{ width: 10, height: 10, borderRadius: 5, background: i === 0 ? C.primary : C.accent }} />
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 18, maxWidth: 1500 }}>
+        {v.items.map((item, i) => (
+          <Rise key={item} delay={14 + i * 4} dur={dur} distance={20}>
+            <span style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 14, borderRadius: 999, padding: "16px 30px", fontFamily: fonts.body, fontSize: 36, fontWeight: 500, color: C.text }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: C.accent }} />
               {item}
             </span>
-          );
-        })}
+          </Rise>
+        ))}
       </div>
     </AbsoluteFill>
   );
@@ -411,13 +287,12 @@ const Chips: React.FC<{ v: Extract<Visual, { kind: "chips" }>; dur: number }> = 
 const Headline: React.FC<{ v: Extract<Visual, { kind: "headline" }>; dur: number }> = ({ v, dur }) => {
   const frame = useCurrentFrame();
   const b = useBreathe(26, 0.008);
-  const shimmer = ((frame - 20) % 70) / 70;
+  const shimmer = interpolate(frame, [26, 70], [0, 1], { ...clamp, easing: theme.ease.inOut });
   return (
     <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 34 }}>
       {v.logo && (
         <Rise dur={dur} distance={30}>
           <div style={{ position: "relative", transform: `translateY(${b.float}px)` }}>
-            <Rings size={200} />
             <Logo size={150} />
           </div>
         </Rise>
@@ -438,10 +313,9 @@ const Headline: React.FC<{ v: Extract<Visual, { kind: "headline" }>; dur: number
               color: "transparent",
               backgroundImage: `linear-gradient(100deg, ${C.primary} 0%, ${C.primary} 40%, #FFE6D2 50%, ${C.primary} 60%, ${C.primary} 100%)`,
               backgroundSize: "300% 100%",
-              backgroundPosition: `${frame < 20 ? 100 : 100 - shimmer * 100}% 0`,
+              backgroundPosition: `${100 - shimmer * 100}% 0`,
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
-              filter: `drop-shadow(0 0 30px ${C.glow})`,
               paddingRight: 8,
             };
           }}
@@ -644,7 +518,7 @@ const End: React.FC<{ dur: number }> = ({ dur }) => {
   return (
     <AbsoluteFill style={{ ...center, flexDirection: "column", gap: 30 }}>
       <div style={{ position: "relative", transform: `scale(${(0.7 + enter * 0.3) * b.scale})`, opacity: enter, filter: `drop-shadow(0 0 50px ${C.glow})` }}>
-        <Rings size={230} color={C.primary} count={4} period={72} />
+        <Rings size={230} color={C.primary} count={2} period={96} />
         <Logo size={170} />
       </div>
       <WordReveal text="Bunon" delay={8} dur={dur + 100} style={{ fontFamily: fonts.display, fontSize: 150, fontWeight: 600, letterSpacing: "-0.04em", color: C.text, justifyContent: "center" }} />
