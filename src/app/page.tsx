@@ -2,222 +2,196 @@
 
 import type React from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Building2,
-  CircleAlert,
-  CircleCheck,
-  FileSearch,
-  Fingerprint,
-  ListChecks,
-  Scale,
-  ShieldCheck,
-  ShoppingBag,
-  Upload,
-} from "lucide-react";
+import { ArrowRight, Building2, Check, Languages, Quote, Repeat2, ShoppingBag, UserCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HowItWorks from "@/components/home/HowItWorks";
+import CountUp from "@/components/home/CountUp";
 import { t } from "@/lib/i18n";
 
-const FACTORY_POINTS = [
-  "One place for every certificate and licence",
-  "Warnings before a certificate expires",
-  "Questionnaires pre-filled from your own evidence",
-  "Screens in Bangla for your staff",
+/** Questions every brand asks in its own words: the problem, shown rather than told. */
+const QUESTIONS = [
+  "Do you hold a valid fire licence?",
+  "Is overtime voluntary?",
+  "Are all workers paid at least the minimum wage?",
+  "Does the factory employ anyone under 18?",
+  "Can workers raise grievances anonymously?",
+  "Has the building been independently assessed?",
+  "Are wages paid on time every month?",
+  "Is your cotton certified organic?",
 ];
 
-const BUYER_POINTS = [
-  "Answers in English, each linked to its source document",
-  "Certificate status checked, not just copied",
-  "A tamper-proof record of what was claimed and when",
-  "Clear flags for anything missing or expired",
+const STATS = [
+  { to: 871, decimals: 0, suffix: "", text: "questions in one industry questionnaire", source: "SLCP v1.7.1", href: "https://slconvergence.org" },
+  { to: 3.6, decimals: 1, suffix: "", text: "social audits per factory each year", source: "Financial Express, 2024", href: "https://thefinancialexpress.com.bd/home/apparel-industry-tops-social-audit-even-amid-a-global-decline" },
+  { to: 45, decimals: 0, suffix: "%", text: "of facilities spend $5,000–20,000 a year on audits", source: "WRAP, 2023", href: "https://wrapcompliance.org/wp-content/uploads/2023/10/How-Many-Social-Audits-Are-Enough-WRAP-Oct-2023.pdf" },
 ];
 
-const LEDGER = [
-  {
-    figure: "3.6",
-    text: "Social audits per factory per year in Bangladesh, the highest of any country in the SLCP programme",
-    source: "Financial Express, Aug 2024",
-    href: "https://thefinancialexpress.com.bd/home/apparel-industry-tops-social-audit-even-amid-a-global-decline",
-  },
-  {
-    figure: "45%",
-    text: "Share of facilities spending $5,000–20,000 a year on audits",
-    source: "WRAP, Oct 2023",
-    href: "https://wrapcompliance.org/wp-content/uploads/2023/10/How-Many-Social-Audits-Are-Enough-WRAP-Oct-2023.pdf",
-  },
-  {
-    figure: "2027-12-14",
-    text: "When the EU ban on products made with forced labour applies, covering every supplier tier",
-    source: "Covington, Jul 2026",
-    href: "https://www.cov.com/en/news-and-insights/insights/2026/07/european-commission-publishes-forced-labour-regulation-guidelines-key-takeaways-for-companies",
-  },
+const WHY = [
+  { Icon: Quote, title: "Every answer has a source", text: "Each answer quotes the sentence it came from." },
+  { Icon: UserCheck, title: "A person approves", text: "AI drafts. Your team checks and sends." },
+  { Icon: Languages, title: "Bangla and English", text: "Staff work in Bangla; buyers read English." },
 ];
+
+const WORKING = ["Questionnaire inbox", "Bangla screens", "Answer reuse", "Your own AI agents (MCP)", "Plans and billing"];
+
+const H2 = "font-display text-[clamp(1.85rem,3vw+0.5rem,3rem)] font-bold leading-[1.12] tracking-[-0.02em] [text-wrap:balance]";
+
+function QuestionRow({ items, direction }: { items: string[]; direction: "left" | "right" }) {
+  return (
+    <div className={`flex w-max gap-3 ${direction === "left" ? "scroll-marquee-left" : "scroll-marquee-right"}`} aria-hidden="true">
+      {[...items, ...items].map((q, i) => (
+        <span key={`${q}-${i}`} className="whitespace-nowrap rounded-full border border-line bg-surface px-5 py-3 text-[15px] text-ink shadow-[0_1px_2px_rgba(20,23,26,0.05)]">
+          {q}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto flex max-w-6xl flex-col items-start px-4 pb-24 pt-20 sm:px-6 lg:pt-32">
-          <div className="scroll-drift space-y-6">
+      <main className="flex-1 overflow-x-clip">
+        {/* Hero: one promise, one line, one picture */}
+        <section className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-24 pt-16 sm:px-6 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1.05fr_0.95fr] lg:pt-10">
+          <div className="scroll-drift space-y-7">
             <p className="rise inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-brand">
               {t("Compliance for Bangladesh’s garment factories")}
             </p>
             <h1 className="hero-title rise" style={{ animationDelay: "60ms" }}>
-              {t("Answer every buyer")}{" "}<em className="scroll-slide italic text-brand">{t("once")}</em>.
+              {t("Answer every buyer")} <em className="scroll-slide italic text-brand">{t("once")}</em>.
             </h1>
-            <p className="rise max-w-[60ch] text-lg leading-relaxed text-ink-muted" style={{ animationDelay: "120ms" }}>
-              {t("Bunon checks a factory’s certificates and licences, then drafts each buyer’s compliance questionnaire from that verified evidence, with a source for every answer. Staff work in Bangla; buyers receive English.")}
+            <p className="rise max-w-[44ch] text-lg leading-relaxed text-ink-muted" style={{ animationDelay: "120ms" }}>
+              {t("Your documents become sourced answers for every buyer. A person approves each one.")}
             </p>
             <div className="rise flex flex-col gap-3 sm:flex-row" style={{ animationDelay: "180ms" }}>
-              <Link href="/login" className="btn-primary-action">
+              <Link href="/login" className="btn-primary-action min-h-[52px] px-7 text-base">
                 {t("Try the demo")}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <Link href="#how-it-works" className="btn-tactile-hollow inline-flex min-h-[48px] items-center justify-center px-6 text-[0.9375rem] font-semibold">
-                {t("See how it works")}
+              <Link href="/pricing" className="btn-tactile-hollow inline-flex min-h-[52px] items-center justify-center px-7 text-base font-semibold">
+                {t("See plans")}
               </Link>
             </div>
-            <p className="rise text-sm text-ink-faint" style={{ animationDelay: "240ms" }}>
-              {t("A working prototype. All companies and certificates in the demo are fictional.")}
-            </p>
+          </div>
+
+          {/* The product in one glance: a buyer's question answered, and the next buyer's ready from it */}
+          <div className="scroll-parallax relative mx-auto w-full max-w-[460px]" aria-hidden="true">
+            <div className="absolute inset-0 -z-10 translate-y-6 scale-110 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-accent)_22%,transparent),transparent)] blur-2xl" />
+            <div className="rise float-soft rounded-2xl border border-line bg-surface p-6 shadow-[0_2px_4px_rgba(20,23,26,0.05),0_30px_60px_-30px_rgba(30,58,95,0.45)]" style={{ animationDelay: "200ms" }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint">{t("Nordlys Apparel asks")}</p>
+              <p className="mt-1.5 font-display text-2xl text-ink">{t("Is overtime voluntary?")}</p>
+              <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-ink">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-success-soft">
+                  <Check className="h-4 w-4 text-success" strokeWidth={3} />
+                </span>
+                {t("Yes")}
+              </p>
+              <p className="mt-3 border-l-2 border-success pl-3 text-[15px] italic text-ink-muted">“{t("Overtime is voluntary and is limited to 2 hours per day.")}”</p>
+              <p className="mt-3 text-xs text-ink-faint">{t("From Working hours policy · approved by a person")}</p>
+            </div>
+            <div className="rise relative -mt-3 ml-8 mr-[-8px] rounded-2xl border border-brand/30 bg-brand-soft p-4 shadow-[0_20px_40px_-28px_rgba(30,58,95,0.5)]" style={{ animationDelay: "320ms" }}>
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <Repeat2 className="h-4 w-4 text-brand" />
+                {t("Vela Outfitters asks the same thing")}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">{t("Ready from your earlier answer. Check it and send.")}</p>
+            </div>
           </div>
         </section>
 
-        {/* Problem */}
-        <section aria-labelledby="problem-title" className="border-y border-line bg-surface">
-          <div className="mx-auto grid max-w-6xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-4">
-              <p className="section-index scroll-reveal">{t("The problem")}</p>
-              <h2 id="problem-title" className="scroll-reveal font-display text-[clamp(1.85rem,3vw+0.5rem,3rem)] font-bold leading-[1.15] tracking-[-0.02em]">
-                {t("The same questions, in a different form for every buyer.")}
-              </h2>
-              <p className="max-w-[60ch] text-base leading-relaxed text-ink-muted">
-                {t("Every brand sends its own compliance questionnaire: fire safety, wages, working hours, certified materials. Compliance staff spend days copying the same facts from folders of paper into form after form, and one expired certificate can cost an order.")}
-              </p>
-            </div>
-            <div className="self-start border-t-2 border-ink">
-              {LEDGER.map((row, i) => (
-                <div key={row.figure} style={{ "--i": i } as React.CSSProperties} className="scroll-reveal grid grid-cols-1 gap-x-8 gap-y-1 border-b border-line py-5 sm:grid-cols-[11rem_1fr]">
-                  <span className="font-mono text-3xl font-semibold tabular-nums text-ink">{row.figure}</span>
-                  <span className="text-sm text-ink-muted">
-                    {t(row.text)}{" "}
-                    <a className="whitespace-nowrap font-mono text-xs text-ink-faint underline hover:text-ink" href={row.href}>
-                      [{row.source}]
-                    </a>
-                  </span>
-                </div>
-              ))}
-            </div>
+        {/* Problem: the same questions keep coming */}
+        <section aria-labelledby="problem-title" className="overflow-hidden border-y border-line bg-surface-2/50 py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <h2 id="problem-title" className={`scroll-reveal max-w-[20ch] ${H2}`}>
+              {t("Every buyer asks the same questions.")}
+            </h2>
+          </div>
+          <div className="mt-12 space-y-3">
+            <QuestionRow items={QUESTIONS.slice(0, 4).concat(QUESTIONS.slice(4, 6))} direction="left" />
+            <QuestionRow items={QUESTIONS.slice(4).concat(QUESTIONS.slice(0, 2))} direction="right" />
+          </div>
+          <div className="mx-auto mt-16 grid max-w-6xl gap-10 px-4 sm:grid-cols-3 sm:px-6">
+            {STATS.map((s, i) => (
+              <div key={s.text} className="scroll-reveal space-y-2" style={{ "--i": i } as React.CSSProperties}>
+                <CountUp to={s.to} decimals={s.decimals} suffix={s.suffix} className="font-display text-6xl font-semibold tracking-[-0.03em] text-ink" />
+                <p className="max-w-[26ch] text-[15px] text-ink-muted">{t(s.text)}</p>
+                <a href={s.href} className="inline-block font-mono text-xs text-ink-faint underline-offset-4 hover:text-ink hover:underline">
+                  {s.source}
+                </a>
+              </div>
+            ))}
           </div>
         </section>
 
         <HowItWorks />
 
-        {/* Who it's for */}
+        {/* Who it's for: two doors */}
         <section id="who-its-for" aria-labelledby="who-title" className="scroll-mt-20 border-y border-line bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-            <div className="max-w-[60ch] space-y-4">
-              <p className="section-index scroll-reveal">{t("Who it’s for")}</p>
-              <h2 id="who-title" className="scroll-reveal font-display text-[clamp(1.85rem,3vw+0.5rem,3rem)] font-bold leading-[1.15] tracking-[-0.02em]">
-                {t("Two workspaces, one source of truth.")}
-              </h2>
-            </div>
-            <div className="mt-12 grid gap-4 md:grid-cols-2">
-              {[
-                { Icon: Building2, title: "Factories", lead: "For compliance officers and managers.", points: FACTORY_POINTS, role: "factory", cta: "Open the factory demo" },
-                { Icon: ShoppingBag, title: "Buyers", lead: "For brands' sourcing and compliance teams.", points: BUYER_POINTS, role: "buyer", cta: "Open the buyer demo" }, ].map(({ Icon, title, lead, points, role, cta }) => (
-                <article key={title} className="flex flex-col rounded-[4px] border border-line bg-canvas p-6 sm:p-8">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-ink text-white">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <h3 className="font-display text-xl font-bold">{t(title)}</h3>
-                  </div>
-                  <p className="mt-3 text-sm text-ink-muted">{t(lead)}</p>
-                  <ul className="mt-5 space-y-3">
-                    {points.map((p) => (
-                      <li key={p} className="flex items-start gap-2.5 text-sm text-ink">
-                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                        {t(p)}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={`/login?role=${role}`}
-                    className="mt-6 inline-flex min-h-[44px] items-center gap-1.5 self-start rounded-[3px] text-sm font-semibold text-brand hover:underline"
-                  >
-                    {t(cta)}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* About */}
-        <section id="about" aria-labelledby="about-title" className="mx-auto grid max-w-6xl scroll-mt-20 gap-12 px-4 py-24 sm:px-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <p className="section-index scroll-reveal">{t("About us")}</p>
-            <h2 id="about-title" className="scroll-reveal font-display text-[clamp(1.85rem,3vw+0.5rem,3rem)] font-bold leading-[1.15] tracking-[-0.02em]">
-              {t("Built in Bangladesh, for the people who fill in the forms.")}
+            <h2 id="who-title" className={`scroll-reveal ${H2}`}>
+              {t("Two sides, one source of truth.")}
             </h2>
-            <p className="max-w-[60ch] text-base leading-relaxed text-ink-muted">
-              {t("Bunon (")}<span className="font-bengali">বুনন</span>{t(") means weaving. We are a small team building compliance software for the factory floor first: Bangla on screen, proof behind every answer, and a person in charge of every decision.")}
-            </p>
-            <p className="max-w-[60ch] text-base leading-relaxed text-ink-muted">
-              {t("Bunon is our entry to the International AI Builders Congress 2026, in the JusticeSphere ComplianceOS challenge.")}
-            </p>
-          </div>
-          <div className="rounded-[4px] border border-line bg-surface p-6 sm:p-8">
-            <h3 className="text-lg font-semibold">{t("What works in the prototype today")}</h3>
-            <ul className="mt-4 space-y-3 text-sm">
+            <div className="mt-12 grid gap-5 md:grid-cols-2">
               {[
-                ["Reading certificates with a local AI model, with a rules-based backup", true],
-                ["Traffic-light checks: issuer record, expiry date and file fingerprint", true],
-                ["A hash-chained, append-only record of every check and approval", true],
-                ["Separate factory and buyer sign-in", true],
-                ["Buyer questionnaire inbox, with AI drafts that quote their source", true],
-                ["Bangla screens for factory staff", true],
-                ["Answers reused across buyers who ask the same thing", true],
-                ["Connect your own AI agent (MCP)", true],
-                ["Plans and billing in taka (payments in test mode)", true],
-              ].map(([label, done]) => (
-                <li key={label as string} className="flex items-start gap-2.5">
-                  {done ? (
-                    <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                  ) : (
-                    <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-                  )}
-                  <span className="text-ink">
-                    {t(label as string)}
-                    <span className="sr-only">{done ? " (working)" : " (in progress)"}</span>
-                    {!done && <span className="ml-1.5 text-ink-faint">{t("· in progress")}</span>}
+                { Icon: Building2, title: "Factories", line: "Answer each question once, from your own documents.", href: "/signup/factory", cta: "Register a factory" },
+                { Icon: ShoppingBag, title: "Buyers", line: "Get every answer with its source. Always free.", href: "/signup", cta: "Create a buyer account" },
+              ].map(({ Icon, title, line, href, cta }, i) => (
+                <Link
+                  key={title}
+                  href={href}
+                  style={{ "--i": i } as React.CSSProperties}
+                  className="scroll-scale-in group flex flex-col gap-5 rounded-2xl border border-line bg-canvas p-8 transition-[border-color,box-shadow] duration-200 hover:border-brand hover:shadow-[0_16px_40px_-24px_rgba(30,58,95,0.45)]"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white">
+                    <Icon className="h-6 w-6" aria-hidden="true" />
                   </span>
-                </li>
+                  <span className="space-y-2">
+                    <span className="block font-display text-3xl font-semibold text-ink">{t(title)}</span>
+                    <span className="block text-base text-ink-muted">{t(line)}</span>
+                  </span>
+                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
+                    {t(cta)}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
+                  </span>
+                </Link>
               ))}
-            </ul>
-            <p className="mt-5 flex items-start gap-2 border-t border-line pt-4 text-sm text-ink-muted">
-              <FileSearch className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-              {t("The certificate registry in the demo is simulated, because certification bodies offer no free access to theirs.")}
-            </p>
+            </div>
           </div>
         </section>
 
-        {/* Closing call to action: the dark indigo band */}
+        {/* About: built for the factory floor */}
+        <section id="about" aria-labelledby="about-title" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6">
+          <h2 id="about-title" className={`scroll-reveal max-w-[22ch] ${H2}`}>
+            {t("Built in Dhaka for the factory floor.")}
+          </h2>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {WHY.map(({ Icon, title, text }, i) => (
+              <div key={title} style={{ "--i": i } as React.CSSProperties} className="scroll-scale-in rounded-2xl border border-line bg-surface p-7">
+                <Icon className="h-7 w-7 text-brand" aria-hidden="true" />
+                <h3 className="mt-5 font-display text-xl font-semibold text-ink">{t(title)}</h3>
+                <p className="mt-2 text-[15px] text-ink-muted">{t(text)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="scroll-reveal mt-10 flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-sm font-semibold text-ink">{t("Working today:")}</span>
+            {WORKING.map((w) => (
+              <span key={w} className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-sm text-success">
+                <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
+                {t(w)}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* Closing call to action */}
         <section className="bg-ink">
-          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-16 sm:px-6 md:flex-row md:items-center">
-            <div className="space-y-2">
-              <h2 className="scroll-reveal font-display text-2xl font-bold text-white sm:text-3xl">{t("See it with demo data.")}</h2>
-              <p className="max-w-[56ch] text-base text-white/75">
-                {t("Sign in as a fictional factory or buyer and run the certificate checks yourself.")}
-              </p>
-            </div>
-            <Link href="/login" className="btn-primary-action shrink-0">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-20 sm:px-6 md:flex-row md:items-center">
+            <h2 className="scroll-reveal font-display text-3xl font-bold text-white sm:text-4xl">{t("See it with demo data.")}</h2>
+            <Link href="/login" className="btn-primary-action min-h-[52px] shrink-0 px-7 text-base">
               {t("Try the demo")}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -228,7 +202,7 @@ export default function HomePage() {
       <footer className="border-t border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-ink-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>
-            <span className="font-semibold text-ink">Bunon</span> · <span className="font-bengali">বুনন</span>{" "}{t("· Dhaka, Bangladesh")}
+            <span className="font-semibold text-ink">Bunon</span> · <span className="font-bengali">বুনন</span> {t("· Dhaka, Bangladesh")}
           </span>
           <span>{t("Prototype. Demo companies and certificates are fictional.")}</span>
         </div>

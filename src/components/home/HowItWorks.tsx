@@ -19,10 +19,10 @@ const STEPS: Step[] = [
     Icon: Upload,
     short: "Upload",
     title: "Upload once",
-    body: "The factory adds its certificates, licences and records, as PDFs or phone photos.",
+    body: "The factory adds its licences, policies and reports, as PDF or text files.",
     visual: (
       <div className="flex flex-wrap gap-2">
-        {["fire_licence.pdf", "organic_cotton_certificate.pdf", "wage_sheet.xlsx", "photo_of_licence.jpg"].map((f) => (
+        {["fire_licence.pdf", "wage_policy.pdf", "working_hours.pdf", "grievance_procedure.md"].map((f) => (
           <span key={f} className={chip}>
             <FileText className="h-3.5 w-3.5" aria-hidden="true" />
             {f}
@@ -35,7 +35,7 @@ const STEPS: Step[] = [
     Icon: FileSearch,
     short: "Check",
     title: "Check every document",
-    body: "A small AI model reads each one. Bunon checks the issuer's records, the expiry date and whether the file was altered.",
+    body: "Bunon reads each one, checks its dates and fingerprints the file, so any later change shows.",
     visual: (
       <ul className="space-y-2 text-sm">
         {["Issuer record matches", "In date until 2027", "File unchanged since upload"].map((c) => (
@@ -51,7 +51,7 @@ const STEPS: Step[] = [
     Icon: ListChecks,
     short: "Draft",
     title: "Draft each buyer's answers",
-    body: "Answers to a buyer's questionnaire are drafted from checked evidence, each citing its source. Anything needing judgement is left for a person.",
+    body: "Each buyer's questions are drafted from your documents, quoting the source. Anything needing judgement goes to a person.",
     visual: (
       <div className="space-y-2 text-sm">
         <p className="font-semibold text-ink">{t("Is overtime voluntary?")}</p>
@@ -68,7 +68,7 @@ const STEPS: Step[] = [
     Icon: Fingerprint,
     short: "Approve",
     title: "Approve and seal",
-    body: "A compliance manager approves every answer. Approved answers are sealed in a tamper-proof record the buyer can check.",
+    body: "A person approves every answer. Approved answers are sealed in a tamper-evident record.",
     visual: (
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="text-ink-muted">{t("Approved by the compliance manager")}</span>

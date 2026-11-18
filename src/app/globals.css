@@ -502,6 +502,36 @@ main :is(.text-\[10px\], .text-\[11px\]),
    with its italic word sliding a little further than the rest. Browsers without
    scroll timelines (and visitors who prefer reduced motion) see static text.
    ============================================================================= */
+/* Home page motion (transform and opacity only). Static for reduced motion or without scroll timelines. */
+@keyframes scroll-marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-30%); }
+}
+@keyframes scroll-marquee-right {
+  from { transform: translateX(-30%); }
+  to { transform: translateX(0); }
+}
+@keyframes scroll-scale-in {
+  from { opacity: 0.15; transform: translateY(40px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes scroll-parallax {
+  to { transform: translateY(-96px); }
+}
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .float-soft { animation: float-soft 6s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+  @supports (animation-timeline: view()) {
+    .scroll-marquee-left { animation: scroll-marquee-left linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+    .scroll-marquee-right { animation: scroll-marquee-right linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+    .scroll-scale-in { animation: scroll-scale-in linear both; animation-timeline: view(); animation-range: entry calc(var(--i, 0) * 6%) cover calc(30% + var(--i, 0) * 6%); }
+    .scroll-parallax { animation: scroll-parallax linear both; animation-timeline: scroll(root); animation-range: 0 90vh; }
+  }
+}
+
 @keyframes scroll-reveal {
   from {
     opacity: 0.15;
