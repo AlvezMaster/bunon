@@ -5,6 +5,8 @@ import { KvAbort } from "@/lib/server/kv";
 import { sessionCookieOptions, signSession } from "@/lib/server/session";
 import { isSecureRequest } from "@/lib/server/auth";
 import { checkSignup, normaliseBin, type SignupInput } from "@/lib/signup-rules";
+import { startSubscription } from "@/lib/server/billing";
+import { isPlanId, type PlanId } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,8 +66,13 @@ export async function POST(req: NextRequest) {
             }
           : undefined,
     });
+    // A new factory starts on the plan it chose (Starter's free month by default); buyers use Bunon free.
+    const chosen = (body as unknown as { plan?: unknown }).plan;
+    const plan: PlanId | null = body.role === "factory" ? (isPlanId(chosen) ? chosen : "starter") : null;
+    const newOrgId = orgIdOfUser(user);
+    if (plan && newOrgId) await startSubscription(newOrgId, plan, user.full_name);
     const token = signSession({ sub: user.id, email: user.email, role: user.role, name: user.full_name, org: user.organization, oid: orgIdOfUser(user) });
-    const res = NextResponse.json({ success: true, user: toPublicUser(user) }, { status: 201 });
+    const res = NextResponse.json({ success: true, user: toPublicUser(user), plan }, { status: 201 });
     const { name, ...options } = sessionCookieOptions(isSecureRequest(req));
     res.cookies.set(name, token, options);
     return res;

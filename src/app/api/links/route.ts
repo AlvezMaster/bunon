@@ -5,6 +5,10 @@ import { scopeFor } from "@/lib/server/access";
 import { acceptInvite, applyLinkStep, createInvite, getFactoryProfile, invitesForFactory, revokeInvite } from "@/lib/server/accounts-repo";
 import { logLinkEvent, runLinkJobs } from "@/lib/server/lifecycle";
 import { agreeUnlink, cancelUnlink, inviteState, partnerOf, requestUnlink, type Link } from "@/lib/links";
+import { getSubscription } from "@/lib/server/billing";
+import { PLANS } from "@/lib/plans";
+import { findInvite, linksForOrg } from "@/lib/server/accounts-repo";
+import { isLive } from "@/lib/links";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +74,8 @@ export async function POST(req: NextRequest) {
   if (body.action === "invite") {
     if (scope.role !== "factory") return fail("Only factories send invites.", 403);
     if ((await invitesForFactory(scope.orgId)).filter((i) => inviteState(i) === "open").length >= 20) return fail("You have 20 open invites. Cancel some first.", 429);
+    const buyerLimit = PLANS[(await getSubscription(scope.orgId)).plan].limits.buyers;
+    if (buyerLimit !== null && scope.links.filter((l) => isLive(l)).length >= buyerLimit) return fail(`Your plan allows up to ${buyerLimit} linked buyers. Upgrade to Pro on the Billing page for more.`, 402);
     const { token, invite } = await createInvite(scope.orgId, guard.session.name, typeof body.note === "string" ? body.note : "");
     return NextResponse.json({ url: `${req.nextUrl.origin}/invite/${token}`, expiresAt: invite.expiresAt });
   }
@@ -81,6 +87,15 @@ export async function POST(req: NextRequest) {
 
   if (body.action === "accept") {
     if (scope.role !== "buyer") return fail("Only buyer accounts can accept an invite. Sign in as a buyer.", 403);
+    const inv = await findInvite(String(body.token ?? ""));
+    if (inv) {
+      // The factory's plan decides how many buyers it can have.
+      const limit = PLANS[(await getSubscription(inv.factoryOrgId)).plan].limits.buyers;
+      const theirs = (await linksForOrg(inv.factoryOrgId)).filter((l) => isLive(l));
+      if (limit !== null && theirs.length >= limit && !theirs.some((l) => l.buyerOrgId === scope.orgId)) {
+        return fail("This factory's plan can't add more buyers right now. Ask the factory to upgrade.", 402);
+      }
+    }
     const result = await acceptInvite(String(body.token ?? ""), scope.orgId);
     if (!result.ok) return fail(result.error, 410);
     if (result.created) await logLinkEvent("LINK CREATED", result.link, me);

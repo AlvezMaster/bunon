@@ -15,6 +15,11 @@ const EVENT_LABEL: Record<string, string> = {
   "AGENT TOKEN CREATED": "Agent token made",
   "AGENT TOKEN REVOKED": "Agent token revoked",
   "AGENT DRAFT PREPARED": "Draft prepared by AI agent",
+  "PLAN STARTED": "Plan started",
+  "PLAN CHANGED": "Plan changed",
+  "PLAN CANCELLED": "Plan set to stop",
+  "PLAN RESUMED": "Plan continued",
+  "SUBSCRIPTION PAID": "Plan paid",
 };
 
 export function eventLabel(type: string): string {

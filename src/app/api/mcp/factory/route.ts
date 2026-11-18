@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAgentToken, touchAgentToken } from "@/lib/server/agent-tokens";
 import { agentContext, FACTORY_TOOLS, HUMAN_ONLY, runFactoryTool } from "@/lib/server/factory-mcp";
+import { getSubscription } from "@/lib/server/billing";
+import { PLANS } from "@/lib/plans";
 
 /**
  * Factory MCP endpoint: Model Context Protocol, JSON-RPC over HTTP (protocol 2024-11-05).
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       const bearer = req.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
       const token = await resolveAgentToken(bearer);
       if (!token) return error(body.id, -32001, "Send a valid agent token: Authorization: Bearer bnn_agent_… (make one on the factory's AI agents page).", 401);
+      if (PLANS[(await getSubscription(token.orgId)).plan].limits.agentTokens === 0) return error(body.id, -32002, "This factory's plan does not include AI agents. Upgrade to Pro in Bunon.", 402);
       await touchAgentToken(token).catch(() => undefined);
       const name = typeof body.params?.name === "string" ? body.params.name : "";
       const args = (body.params?.arguments ?? {}) as Record<string, unknown>;

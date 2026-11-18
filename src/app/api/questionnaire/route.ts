@@ -17,6 +17,8 @@ import { listDocuments, loadCorpus } from "@/lib/server/documents-repo";
 import { reuseSuggestions } from "@/lib/server/answer-memory";
 import { canonicalJson, sha256Hex } from "@/lib/crypto";
 import { partnerOf, acceptsNewQuestions } from "@/lib/links";
+import { getSubscription } from "@/lib/server/billing";
+import { canSendAnswers } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -216,6 +218,9 @@ export async function POST(req: NextRequest) {
   if (body.action === "approve") {
     // Sending an answer to a buyer is always a person's decision, never an AI agent's.
     if (isAgentSession(session)) return fail("Only a person can send an answer. Prepare it instead; a person checks and sends it in Bunon.", 403);
+    // An unpaid plan (after its grace days) pauses sending; drafting and reading carry on.
+    const billing = canSendAnswers(await getSubscription(scope.orgId));
+    if (!billing.ok) return fail(billing.reason ?? "Your plan is unpaid.", 402);
     const answer = typeof body.answer === "string" ? body.answer.trim() : "";
     const quote = typeof body.quote === "string" ? body.quote.trim() : "";
     const { docs } = await loadCorpus(scope.orgId);

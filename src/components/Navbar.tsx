@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { ChevronDown, LogIn, LogOut } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, CreditCard } from "lucide-react";
 import { useBunonStore, type UserRole } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { PreferenceToggles } from "@/components/Preferences";
@@ -17,6 +17,7 @@ const PUBLIC_LINKS: NavLink[] = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#who-its-for", label: "Who it's for" },
   { href: "/#about", label: "About us" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 function workspaceLinks(role: UserRole): NavLink[] {
@@ -236,6 +237,16 @@ export default function Navbar() {
                         <PreferenceToggles />
                       </div>
                       <div className="border-t border-ink/[0.06] pt-1">
+                        {session.role === "factory" && (
+                          <Link
+                            href="/factory/billing"
+                            role="menuitem"
+                            className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-[13px] text-ink-muted transition-colors duration-150 hover:bg-ink/[0.05] hover:text-ink"
+                          >
+                            <CreditCard className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                            {t("Plan and billing")}
+                          </Link>
+                        )}
                         <button
                           type="button"
                           role="menuitem"

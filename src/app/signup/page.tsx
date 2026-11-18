@@ -9,6 +9,7 @@ import { t } from "@/lib/i18n";
 import { PreferenceToggles } from "@/components/Preferences";
 import BunonLogo from "@/components/BunonLogo";
 import { checkAccount, checkFactoryProfile, type SignupErrors, type SignupInput } from "@/lib/signup-rules";
+import { PLANS, isPlanId, type PlanId } from "@/lib/plans";
 
 const FIELD =
   "w-full rounded-lg border bg-surface/70 px-3 py-2.5 text-base text-ink outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-brand)_18%,transparent)] dark:bg-white/[0.03]";
@@ -52,6 +53,7 @@ export default function SignupPage() {
   const [role, setRole] = useState<UserRole>("buyer");
   const [step, setStep] = useState<1 | 2>(1);
   const [invite, setInvite] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PlanId | null>(null);
   const [v, setV] = useState<SignupInput>({ role: "buyer", company: "", fullName: "", email: "", password: "", association: "BGMEA", declaration: false });
   const [errors, setErrors] = useState<SignupErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -61,6 +63,12 @@ export default function SignupPage() {
     const p = new URLSearchParams(window.location.search);
     const r = p.get("role");
     if (r === "factory" || r === "buyer") setRole(r);
+    // Coming from the pricing page: a factory account on the chosen plan.
+    const pl = p.get("plan");
+    if (isPlanId(pl)) {
+      setPlan(pl);
+      setRole("factory");
+    }
     const inv = p.get("invite");
     if (inv && /^[A-Za-z0-9_-]{20,100}$/.test(inv)) {
       setInvite(inv);
@@ -82,7 +90,7 @@ export default function SignupPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    const input = { ...v, role };
+    const input = { ...v, role, ...(role === "factory" && plan ? { plan } : {}) };
     const accountErrors = checkAccount(input);
     if (role === "factory" && step === 1) {
       setErrors(accountErrors);
@@ -107,7 +115,7 @@ export default function SignupPage() {
         throw new Error(data.error ?? "Sign-up failed.");
       }
       setSession(data.user);
-      router.push(invite ? `/invite/${invite}` : data.user.role === "factory" ? "/factory" : "/buyer");
+      router.push(invite ? `/invite/${invite}` : data.user.role === "factory" ? (plan && plan !== "starter" ? "/factory/billing?welcome=1" : "/factory") : "/buyer");
     } catch (err) {
       setFormError(t(err instanceof Error ? err.message : "Sign-up failed."));
     } finally {
@@ -149,6 +157,17 @@ export default function SignupPage() {
                   ? `${t("Step")} ${step} ${t("of")} 2 · ${step === 1 ? t("Your account") : t("Factory details for buyers")}`
                   : t("Free for buyers. Takes a minute.")}
             </p>
+            {role === "factory" && !invite && (
+              <p className="flex flex-wrap items-center justify-center gap-2 text-sm">
+                <span className="inline-flex items-center rounded-full border border-brand/30 bg-brand-soft px-3 py-1 font-medium text-ink">
+                  {t("Plan")}: {t(PLANS[plan ?? "starter"].name)}
+                  {(plan ?? "starter") === "starter" ? ` · ${t("1 month free")}` : ""}
+                </span>
+                <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 font-medium text-ink-muted underline underline-offset-4 hover:text-ink">
+                  {t("Change plan")}
+                </Link>
+              </p>
+            )}
           </div>
 
           <p className="mt-4 rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-center text-xs text-ink-muted">

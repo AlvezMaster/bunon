@@ -68,6 +68,21 @@ Endpoint: `POST /api/mcp/factory`, Model Context Protocol over JSON-RPC (protoco
 
 The older `/api/mcp` endpoint is the buyer-side demo: read-only tools over the demo order catalog.
 
+## Plans and billing (factories pay, buyers are free)
+
+| Plan | Price (BDT) | Limits |
+|---|---|---|
+| Starter | 1 month free, then ৳3,500 a month | 3 linked buyers, 20 documents, no AI agents |
+| Pro | ৳7,500 a month | unlimited buyers, 50 documents, up to 5 AI agent tokens |
+| Enterprise | quoted per customer (form on `/pricing`) | agreed per contract |
+
+- **Sign-up:** `/pricing` → `/signup?plan=…` creates the factory account on that plan. Starter starts its free month; Pro and Enterprise go to `/factory/billing`.
+- **Paying:** through **SSLCommerz**, Bangladesh's payment gateway: bKash, Nagad, Rocket, cards and internet banking in one checkout, for 1, 3, 6 or 12 months at a time (automatic monthly debits are rare in Bangladesh, so Bunon tracks the paid-until date and the factory pays ahead). A payment counts only after SSLCommerz's Order Validation API confirms it and the transaction id, amount and currency match what Bunon asked for; the browser return and the server-to-server IPN both validate, and settling twice changes nothing.
+- **When unpaid:** after the free month or paid time ends there are 7 days' grace; then *sending* answers pauses until payment. Reading, drafting and the factory's data are never touched. Plan limits are enforced on the server (buyers on invite and accept, documents on upload, AI agents on token creation and MCP calls). Accounts made before billing existed, such as the demo accounts, keep full use.
+- **Records:** plan changes and payments go into the factory's ledger (amounts and references, never card or wallet details).
+- **Setup:** register a free sandbox store at developer.sslcommerz.com and set `SSLCOMMERZ_STORE_ID` and `SSLCOMMERZ_STORE_PASSWORD` (add `SSLCOMMERZ_LIVE=true` only for a live store). Without them, checkout says "Online payment is not switched on yet".
+- Code: `src/lib/plans.ts` (plans and rules), `src/lib/server/billing.ts`, `src/lib/server/sslcommerz.ts`, `src/app/api/billing/`, pages `src/app/pricing` and `src/app/factory/billing`. Tests: `tests/billing.test.ts`.
+
 ## Responsible AI
 
 - **Local model first.** Qwen 3.5 4B runs through Ollama on the factory's computer, so documents do not leave the factory for drafting.

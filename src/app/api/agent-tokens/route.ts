@@ -6,6 +6,8 @@ import { KvAbort } from "@/lib/server/kv";
 import { createAgentToken, listAgentTokens, revokeAgentToken, MAX_TOKENS_PER_FACTORY } from "@/lib/server/agent-tokens";
 import { appendLedgerBlock } from "@/lib/server/ledger-repo";
 import { recordBlockParties } from "@/lib/server/ledger-parties";
+import { getSubscription } from "@/lib/server/billing";
+import { PLANS } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
   };
 
   if (body?.action === "create") {
+    if (PLANS[(await getSubscription(g.scope.orgId)).plan].limits.agentTokens === 0) return fail("AI agents are part of the Pro and Enterprise plans. Upgrade on the Billing page.", 402);
     try {
       const { token, meta } = await createAgentToken(g.scope.orgId, String(body.name ?? ""), g.session.name);
       await record("AGENT TOKEN CREATED", `${g.session.name} made agent token ${meta.id} ("${meta.name}") for the factory MCP connector.`);
