@@ -183,7 +183,9 @@ Settings (see `.env.example`): `BUNON_SESSION_SECRET`; `BUNON_DATA_SOURCE` (`aut
 
 - **Claude Code (Anthropic)** as an AI coding assistant for design, code and reviews.
 - **Qwen 3.5 4B via Ollama** for certificate reading and answer drafting on a local computer, and **Qwen 3.8 27B on Cloudflare Workers AI** for the public demo (prompts in `src/lib/server/questionnaire-ai.ts` and `src/lib/server/ollama.ts`).
-- **MCP:** Bunon exposes a small MCP endpoint at `/api/mcp` serving the demo catalog.
+- **MCP:** a factory MCP connector at `/api/mcp/factory` for a factory's own AI agent (see above), and a small buyer-side endpoint at `/api/mcp` serving the demo catalog.
+- **Video:** made with **Remotion** (`video/`); the voice-over is generated with **Google Gemini text-to-speech** (voice "Charon", `video/scripts/voice-gemini.mjs`).
+- **Payments:** **SSLCommerz** (test mode until the store is approved).
 - Hosting: **Vercel**; database: **Cloudflare D1**; framework: Next.js 16, React 19, TypeScript, Tailwind CSS.
 
 ## Team

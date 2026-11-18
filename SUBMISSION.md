@@ -1,0 +1,133 @@
+# Bunon: preliminary submission
+
+**International AI Builders Congress 2026 · Idea to Unicorn · JusticeSphere (compliance)**
+
+Bunon lets a Bangladeshi garment factory answer every buyer's compliance questionnaire once. AI drafts each answer from the factory's own documents and quotes the sentence it used; a person checks and sends it; every answer is sealed in a tamper-evident record. Buyers use it free; factories pay a monthly plan.
+
+| | |
+|---|---|
+| Live product | https://bunon-ten.vercel.app |
+| Code | https://github.com/AlvezMaster/bunon (README has the full technical write-up) |
+| 3-minute video | _add the YouTube or Drive link here_ |
+| Try it | Factory `factory@nodiwear.example` · Buyer `buyer@nordlys-apparel.example` · passphrase `demo123` (fictional companies; demo data is labelled on screen) |
+
+---
+
+## 1. The seven mandatory items (Participants Guide §9.2) and where to see them
+
+| Item | In the video | In the product |
+|---|---|---|
+| 3-minute structured pitch | 0:00–3:00 in the five official parts (Problem, Solution, Demo, AI approach, Impact) | – |
+| Clear problem and users | 0:00–0:30: 3,555 export factories, a separate questionnaire from every brand, 871 questions in one industry set | Factory compliance officers; EU buyers |
+| AI-native approach (LLM / RAG / graph / ML) | 2:00–2:30: hybrid RAG, Qwen drafting, two-model checks; 1:28: answer memory (question graph) | `/factory/documents` "Try a question"; `/factory/questionnaire` |
+| Basic system flow (input → AI → output) | 0:34–0:52: documents → AI draft with quote → person checks → sealed record | Section 2 below |
+| Working demo | 1:00–2:00, all screens from the live product | https://bunon-ten.vercel.app |
+| Bangla / localisation | 1:49: whole workspace in Bangla; 2:00: search in English and Bangla | Language button on every page; bias check in Section 4 |
+| Impact (KPIs) | 2:30–2:50: about 3 s per draft with its source; pilot KPIs: hours saved, answers with a source, buyer follow-ups | Section 4 below |
+
+---
+
+## 2. Submission package (Participants Guide §9.1)
+
+### Problem definition
+A factory sells to many brands, and each brand sends its own questionnaire about the same things: fire safety, wages, working hours, child labour. One industry questionnaire alone has 871 questions, and 45% of surveyed facilities spend $5,000–20,000 a year on audits (WRAP, 2023). Compliance officers copy the same facts from folders of licences and policies into form after form, and a wrong or out-of-date answer can cost an order. New EU due-diligence rules will add more questions.
+
+**Users:** factory compliance officers and managers (pay), and EU brand sourcing and compliance teams (free).
+
+### AI architecture
+```
+Factory documents (PDF, text) ──▶ passages (~700 chars) ──▶ hybrid search: keywords + Qwen3 embeddings,
+                                                             fused by reciprocal rank (+ Bangla glossary offline)
+Buyer's question ──────────────────────────────────────────▶ top 4 passages of THAT factory only
+                                                                     │
+         answer memory (question graph: topic, question kind,        ▼
+         negatives, numbers, wording) ── earlier approved ──▶ Qwen drafts: answer + exact quote + source
+         answer for the same question? ──▶ pre-filled                │
+                                                                     ▼
+                       checks: quote must be word for word in the document · a second (decision) model must
+                       agree · a "Yes" may not rest on a negative · "when / how many" needs a value
+                                                                     │ fails → "please answer yourself"
+                                                                     ▼
+                       a person approves, edits or writes ──▶ sent to the buyer ──▶ SHA-256 hash-chained ledger
+```
+- **Models:** Qwen 3.5 4B through Ollama on the factory's own computer; Qwen on Cloudflare Workers AI for the public website; Qwen3-Embedding 0.6B for meaning search; a small Naive Bayes decision model.
+- **Agents:** a factory can connect its own AI agent through an MCP connector (`/api/mcp/factory`): 10 tools scoped to that factory; it can prepare answers but only a person can send them.
+- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 69 automated tests.
+
+### Data and sovereignty strategy
+- **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
+- **Where AI runs:** on the factory's own computer (nothing leaves the factory) or, on the website, in the cloud with **personal data masked first**: names, phone numbers, emails and ID numbers become placeholders and are restored only on Bunon's server.
+- **What the record keeps:** the ledger stores company ids and fingerprints, never answer text, so shared answers can be deleted while the proof remains.
+- **Leaving:** either side can unlink (12-hour undo); both can download the shared data for 30 days; then shared answers are deleted.
+- **Demo data:** all companies and documents in the demo are fictional and labelled; the certificate registry is a labelled simulation. Public numbers in the video cite their sources (README, VOICEOVER.md).
+- Designed with GDPR and Bangladesh's personal-data rules in mind; we do not claim certification of compliance.
+
+### Demo: a two-minute tour for judges
+1. Sign in as the factory → **Questions** → the Nordlys questionnaire → **Draft all with AI**: drafts with quoted sources; questions the documents can't answer go to a person.
+2. Still in Nordlys, draft and **send question 10** (independent building safety assessment). Then open the **Vela Outfitters** questionnaire: Vela asks the same thing in other words, and it arrives pre-filled from that answer (answer reuse).
+3. **Documents** → "Try a question" in Bangla: কারখানায় কি ১৮ বছরের কম বয়সী কেউ কাজ করে?
+4. **AI agents**: make a token for your own agent (MCP); its prepared answers wait for a person.
+5. Sign in as the buyer → **Questions** → one questionnaire sent to two factories, answers side by side with sources.
+6. **Pricing** (`/pricing`): plans in taka; factories sign up on a plan and pay through SSLCommerz.
+
+### Scalability roadmap
+| When | Product | Scale and markets |
+|---|---|---|
+| Now (built) | Drafting with sources, answer reuse, Bangla, buyer comparison, ledger, MCP connector, plans and billing | Serverless on Vercel, D1 database, per-factory data scoping; local or cloud AI |
+| Next 3 months | Pilots with Bangladeshi factories; checks against official registers; the full SLCP question set | Grow factory by factory; buyers join free and bring their factories |
+| 6–12 months | iOS and Android apps; reading scanned licences; more questionnaire standards | Other garment exporters that answer the same industry questionnaires (for example Vietnam, Cambodia, Pakistan, Sri Lanka), each with a language pack |
+
+### Ethical safeguards
+- **A person sends every answer.** The AI only drafts; agents can only prepare. The server refuses to let an agent send, link, upload or pay.
+- **Grounded answers only.** Every AI answer quotes its source sentence, checked word for word on the server, even after a person edits it.
+- **Bunon checks documents; it does not certify factories.** Said in the video and on screen.
+- **Bias checked:** English and Bangla measured side by side; two gaps found and fixed (Section 4).
+- **Privacy:** personal data masked before any cloud AI call; local mode keeps everything inside the factory.
+- **Honesty:** demo data, simulated registry and test-mode payments are labelled; planned features are called "Next".
+
+---
+
+## 3. Business model
+| Plan | Price | For |
+|---|---|---|
+| Starter | first month free, then ৳3,500 / month | one factory, up to 3 buyers, 20 documents |
+| Pro | ৳7,500 / month | unlimited buyers, 50 documents, the factory's own AI agents |
+| Enterprise | quote | groups and large factories, AI on their own computers, training |
+
+- **Buyers are always free**, so each buyer brings its factories: the network grows from the buyer side.
+- **Payments in Bangladesh:** bKash, Nagad, Rocket, cards and internet banking through SSLCommerz; pay 1–12 months ahead. Trials, limits and grace days are enforced in the product.
+- **Size, as an illustration (not a forecast):** if 10% of Bangladesh's 3,555 export factories (about 356) paid Starter to Pro prices, that is ৳15–32 million a year, against the $5,000–20,000 a year many facilities already spend on audits.
+
+---
+
+## 4. Measured results (our own tests; small labelled sets on synthetic documents)
+| Test | Result |
+|---|---|
+| Right document in the top 4 (hybrid search, 16 reworded questions, 4 in Bangla) | 16 / 16 |
+| Correct cited answers, local Qwen 3.5 4B (13 labelled questions) | 8 / 10, with 0 wrong drafts kept and 3 / 3 left for a person |
+| Language bias check, after fixes | Bangla 8 / 10 = English 8 / 10; Bangla search on new questions 7 / 8 vs English 6 / 8 |
+| Answer reuse (40 questions from two more buyers) | 18 / 24 repeats found, 16 / 16 look-alikes left alone, **0 wrong suggestions** |
+| Draft time | about 3 s per answer (local Qwen 3.5 4B) |
+| Automated tests | 69 passing; plus an end-to-end check of the MCP connector |
+
+Details and how to rerun each test: README, "Evaluation" sections.
+
+---
+
+## 5. Team and roles
+| Name | Role |
+|---|---|
+| _add_ | Product and engineering |
+| _add_ | Business and research (factory interviews, pricing, business case) |
+| _add_ | _role_ |
+
+---
+
+## 6. Tools and AI disclosure
+Built with Claude Code (Anthropic) as the coding assistant. Product AI: Qwen models (Ollama locally, Cloudflare Workers AI online) and Qwen3-Embedding. Video: made with Remotion; the voice-over is generated with Google Gemini text-to-speech. Full list in the README.
+
+## 7. Honest limits
+- Test sets are small and the documents are synthetic; real pilots are the next step.
+- Online payments run in SSLCommerz's test mode until the store is approved.
+- The certificate registry is a labelled simulation; checks against official registers are planned.
+- Bangla interface text still needs a native-speaker review.
