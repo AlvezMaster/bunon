@@ -129,7 +129,7 @@ export default function InvitePage() {
                 </p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <Link href={`/signup?role=buyer&invite=${token}`} className="btn-primary-action min-h-[48px] w-full rounded-lg">
+                  <Link href={`/signup?invite=${token}`} className="btn-primary-action min-h-[48px] w-full rounded-lg">
                     {t("Create a free buyer account")}
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>

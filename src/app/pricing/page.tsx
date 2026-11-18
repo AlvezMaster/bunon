@@ -19,7 +19,7 @@ const KEY_POINTS: Record<PlanId, string[]> = {
 export default function PricingPlansPage() {
   const session = useBunonStore((s) => s.session);
   const isFactory = session?.role === "factory";
-  const href = (id: PlanId) => (id === "enterprise" ? "/pricing/enterprise" : isFactory ? `/factory/billing?plan=${id}` : `/signup?plan=${id}`);
+  const href = (id: PlanId) => (id === "enterprise" ? "/pricing/enterprise" : isFactory ? `/factory/billing?plan=${id}` : `/signup/factory?plan=${id}`);
 
   return (
     <PricingShell title="Simple plans for every factory" note="Buyers are always free. Prices are in taka, per month.">

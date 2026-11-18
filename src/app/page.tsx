@@ -181,8 +181,11 @@ export default function HomePage() {
                 ["Traffic-light checks: issuer record, expiry date and file fingerprint", true],
                 ["A hash-chained, append-only record of every check and approval", true],
                 ["Separate factory and buyer sign-in", true],
-                ["Buyer questionnaire inbox", false],
-                ["Bangla screens for factory staff", false],
+                ["Buyer questionnaire inbox, with AI drafts that quote their source", true],
+                ["Bangla screens for factory staff", true],
+                ["Answers reused across buyers who ask the same thing", true],
+                ["Connect your own AI agent (MCP)", true],
+                ["Plans and billing in taka (payments in test mode)", true],
               ].map(([label, done]) => (
                 <li key={label as string} className="flex items-start gap-2.5">
                   {done ? (

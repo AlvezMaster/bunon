@@ -3,32 +3,17 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Factory, ShoppingBag, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowRight, Factory, RefreshCw, ShoppingBag } from "lucide-react";
 import { useBunonStore, type SessionUser, type UserRole } from "@/lib/store";
 import { t } from "@/lib/i18n";
-import { PreferenceToggles } from "@/components/Preferences";
-import BunonLogo from "@/components/BunonLogo";
+import AuthShell, { AuthField } from "@/components/auth/AuthShell";
 
-const FIELD =
-  "w-full rounded-lg border border-field bg-surface/70 px-3 py-2.5 text-base text-ink outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-brand)_18%,transparent)] dark:bg-white/[0.03]";
-
-const ROLES: Record<UserRole, { label: string; Icon: typeof Factory; email: string; blurb: string; home: string }> = {
-  factory: {
-    label: "Factory",
-    Icon: Factory,
-    email: "factory@nodiwear.example",
-    blurb: "Upload and check certificates, answer buyer questionnaires, and approve what gets sent.",
-    home: "/factory",
-  }, buyer: {
-    label: "Buyer",
-    Icon: ShoppingBag,
-    email: "buyer@nordlys-apparel.example",
-    blurb: "Check a supplier's verified evidence and confirm every answer against its source.",
-    home: "/buyer",
-  },
-};
-
-const ROLE_ORDER: UserRole[] = ["factory", "buyer"];
+const HOME: Record<UserRole, string> = { factory: "/factory", buyer: "/buyer" };
+/** The public demo accounts (fictional companies); their passphrase is published on purpose. */
+const DEMO: Array<{ role: UserRole; label: string; email: string; Icon: typeof Factory }> = [
+  { role: "factory", label: "Demo factory", email: "factory@nodiwear.example", Icon: Factory },
+  { role: "buyer", label: "Demo buyer", email: "buyer@nordlys-apparel.example", Icon: ShoppingBag },
+];
 
 /** Only same-site paths are allowed as a post-login destination. */
 function safeNext(raw: string | null): string | null {
@@ -40,200 +25,106 @@ export default function LoginPage() {
   const router = useRouter();
   const setSession = useBunonStore((s) => s.setSession);
   const session = useBunonStore((s) => s.session);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [invite, setInvite] = useState<string | null>(null);
 
-  const [activeRole, setActiveRole] = useState<UserRole>("factory");
-  const [email, setEmail] = useState<string>(ROLES.factory.email);
-  const [password, setPassword] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
-
-  // Pre-select the role from ?role= or from the area the visitor was trying to open (?next=/buyer…).
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const nextPath = params.get("next") ?? "";
-    const invite = nextPath.match(/^\/invite\/([A-Za-z0-9_-]{20,100})$/)?.[1] ?? null;
-    setInviteToken(invite);
-    const wanted = params.get("role") ?? (nextPath.startsWith("/buyer") || invite ? "buyer" : null);
-    if (wanted === "buyer" || wanted === "factory") {
-      setActiveRole(wanted);
-      setEmail(ROLES[wanted].email);
-    }
+    const next = new URLSearchParams(window.location.search).get("next") ?? "";
+    setInvite(next.match(/^\/invite\/([A-Za-z0-9_-]{20,100})$/)?.[1] ?? null);
   }, []);
 
-  const handleRoleSwitch = (role: UserRole) => {
-    setActiveRole(role);
-    setErrorMessage(null);
-    setEmail(ROLES[role].email);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage(null);
+  const signIn = async (who: { email: string; password: string }, key: string) => {
+    setBusy(key);
+    setError(null);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }),
-      });
+      const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(who) });
       const data = (await res.json().catch(() => ({}))) as { error?: string; user?: SessionUser };
-      if (!res.ok || !data.user) {
-        throw new Error(data.error || t("Sign-in failed. Check the email and passphrase, then try again."));
-      }
+      if (!res.ok || !data.user) throw new Error(data.error || "Check the email and passphrase, then try again.");
       setSession(data.user);
-      const next = safeNext(new URLSearchParams(window.location.search).get("next"));
-      router.push(next ?? ROLES[data.user.role].home);
+      router.push(safeNext(new URLSearchParams(window.location.search).get("next")) ?? HOME[data.user.role]);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : t("Sign-in failed. Check the email and passphrase, then try again."));
-    } finally {
-      setIsLoading(false);
+      setError(t(err instanceof Error ? err.message : "Check the email and passphrase, then try again."));
+      setBusy(null);
     }
   };
 
-  const role = ROLES[activeRole];
-
   return (
-    <div className="flex min-h-screen flex-col text-ink">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 pt-4 sm:px-6">
-        <Link
-          href="/"
-          className="flex h-11 items-center gap-2 rounded-full px-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          {t("Back to overview")}
-        </Link>
-        <PreferenceToggles />
+    <AuthShell visualTitle="Answer every buyer once." visualLine="Your documents become sourced answers. A person approves every one.">
+      <h1 className="font-display text-[2.25rem] font-semibold leading-tight tracking-[-0.02em]">{t("Sign in")}</h1>
+      {session && (
+        <p className="mt-2 text-sm text-ink-muted">
+          {t("Signed in as")} <strong className="font-medium text-ink">{session.fullName}</strong> ·{" "}
+          <Link href={HOME[session.role]} className="font-semibold text-brand hover:underline">
+            {t("Open your workspace")}
+          </Link>
+        </p>
+      )}
+
+      <div className="mt-8 grid grid-cols-2 gap-3">
+        {DEMO.map((d) => (
+          <button
+            key={d.role}
+            type="button"
+            disabled={!!busy}
+            onClick={() => void signIn({ email: d.email, password: "demo123" }, d.role)}
+            className="group flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-xl border border-line bg-surface px-4 text-left transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand hover:shadow-[0_8px_24px_-12px_rgba(30,58,95,0.35)] active:scale-[0.98] motion-reduce:transform-none"
+          >
+            {busy === d.role ? <RefreshCw className="h-5 w-5 animate-spin text-brand motion-reduce:animate-none" aria-hidden="true" /> : <d.Icon className="h-5 w-5 text-brand" aria-hidden="true" />}
+            <span className="text-sm font-semibold text-ink">{t(d.label)}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-ink-faint">{t("One click. Fictional demo companies.")}</p>
+
+      <div className="my-7 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.08em] text-ink-faint">
+        <span className="h-px flex-1 bg-line" />
+        {t("or")}
+        <span className="h-px flex-1 bg-line" />
       </div>
 
-      <main className="flex flex-1 items-center justify-center px-4 pb-16 pt-6 sm:px-8">
-        <div className="morph-in w-full max-w-[420px] rounded-xl border border-line bg-surface/80 p-6 shadow-[var(--shadow-raised)] backdrop-blur-xl sm:p-8 dark:border-white/[0.12] dark:bg-white/[0.04]">
-          <Link href="/" aria-label={t("Bunon home")} className="mx-auto flex w-fit items-center gap-3 rounded-lg">
-            <BunonLogo className="h-11 w-11" />
-            <span className="font-display text-4xl font-semibold tracking-tight">Bunon</span>
-          </Link>
-
-          <div className="mt-6 space-y-2 text-center">
-            <h1 className="font-display text-2xl font-semibold tracking-tight [text-wrap:balance]">{t("Sign in to Bunon")}</h1>
-            <p className="text-sm text-ink-muted">{t("Factories and buyers each have their own workspace.")}</p>
-          </div>
-
-          {session && (
-            <div role="status" className="mt-6 rounded-lg border border-line bg-surface-2 p-3 text-sm text-ink-muted">
-              {t("Signed in as")}{" "}<strong className="text-ink">{session.fullName}</strong>{t(". Signing in again switches account.")}
-            </div>
-          )}
-
-          <div
-            role="radiogroup"
-            aria-label={t("Account type")}
-            className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-line bg-surface-2/70 p-1"
-          >
-            {ROLE_ORDER.map((r) => {
-              const selected = activeRole === r;
-              const { Icon, label } = ROLES[r];
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => handleRoleSwitch(r)}
-                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-full text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${
-                    selected ? "bg-[var(--color-ink)] text-canvas shadow-[var(--shadow-card)]" : "text-ink-muted hover:text-ink"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {t(label)}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-center text-xs italic text-ink-muted">{t(role.blurb)}</p>
-
-          <form onSubmit={handleLogin} className="mt-6 space-y-4" noValidate>
-            <div className="space-y-1.5">
-              <label htmlFor="login-email" className="block text-sm font-medium text-ink">
-                {t("Email")}
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={FIELD}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="login-password" className="block text-sm font-medium text-ink">
-                {t("Passphrase")}
-              </label>
-              <input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                aria-describedby="login-hint"
-                aria-invalid={errorMessage ? true : undefined}
-                className={FIELD}
-              />
-            </div>
-
-            <p
-              id="login-hint"
-              className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm text-ink-muted"
-            >
-              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-              <span>
-                {t("Demo accounts use the passphrase")}{" "}<code className="font-mono font-semibold text-ink">demo123</code>{t(". Both companies are fictional.")}
-              </span>
-            </p>
-
-            {errorMessage && (
-              <div role="alert" className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger">
-                {errorMessage}
-              </div>
-            )}
-
-            <button type="submit" disabled={isLoading} className="btn-primary-action min-h-[48px] w-full rounded-lg">
-              {isLoading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                  <span>{t("Signing in…")}</span>
-                </>
-              ) : (
-                <>
-                  <span>{t(`Sign in as ${role.label.toLowerCase()}`)}</span>
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-ink-muted">
-            {t("New to Bunon?")}{" "}
-            <Link
-              href={inviteToken ? `/signup?role=buyer&invite=${inviteToken}` : `/signup?role=${activeRole}`}
-              className="font-semibold text-ink underline decoration-line-strong underline-offset-4"
-            >
-              {t("Create an account")}
-            </Link>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void signIn({ email, password }, "form");
+        }}
+        className="space-y-4"
+        noValidate
+      >
+        <AuthField id="login-email" label="Email">
+          {(p) => <input {...p} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />}
+        </AuthField>
+        <AuthField id="login-password" label="Passphrase">
+          {(p) => <input {...p} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />}
+        </AuthField>
+        {error && (
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger">
+            {error}
           </p>
+        )}
+        <button type="submit" disabled={!!busy} className="btn-primary-action min-h-[52px] w-full rounded-xl text-base">
+          {busy === "form" ? <RefreshCw className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : null}
+          {t("Sign in")}
+          {busy !== "form" && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      </form>
 
-          <details className="group mt-2 text-center text-xs text-ink-muted">
-            <summary className="mx-auto flex min-h-[44px] w-fit cursor-pointer list-none items-center font-medium underline decoration-line-strong underline-offset-4 hover:text-ink [&::-webkit-details-marker]:hidden">
-              {t("Technical details")}
-            </summary>
-            <p className="pb-2 text-left">
-              {t("Passwords are stored as scrypt hashes; sessions use a signed, httpOnly cookie that expires after 8 hours.")}
-            </p>
-          </details>
-        </div>
-      </main>
-    </div>
+      <p className="mt-8 text-sm text-ink-muted">
+        {t("New to Bunon?")}{" "}
+        <Link href={invite ? `/signup?invite=${invite}` : "/signup"} className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
+          {t("Buyer account")}
+        </Link>
+        {!invite && (
+          <>
+            {" · "}
+            <Link href="/signup/factory" className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
+              {t("Register a factory")}
+            </Link>
+          </>
+        )}
+      </p>
+    </AuthShell>
   );
 }

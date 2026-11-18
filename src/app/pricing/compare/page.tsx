@@ -38,7 +38,7 @@ function Value({ v }: { v: Cell }) {
 /** Pricing, page 2: the plans side by side, feature by feature. */
 export default function PricingComparePage() {
   const session = useBunonStore((s) => s.session);
-  const href = (id: PlanId) => (id === "enterprise" ? "/pricing/enterprise" : session?.role === "factory" ? `/factory/billing?plan=${id}` : `/signup?plan=${id}`);
+  const href = (id: PlanId) => (id === "enterprise" ? "/pricing/enterprise" : session?.role === "factory" ? `/factory/billing?plan=${id}` : `/signup/factory?plan=${id}`);
 
   return (
     <PricingShell title="Compare the plans" note="Everything in one table. Every feature here works in Bunon today.">
