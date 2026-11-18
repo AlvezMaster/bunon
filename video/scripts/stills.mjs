@@ -8,13 +8,14 @@ import { renderStill, selectComposition } from "@remotion/renderer";
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { timeline } from "../src/script.ts";
+import { VO } from "../src/vo.generated.ts";
 
 const only = process.argv.slice(2).map(Number);
 const out = resolve("out/frames");
 mkdirSync(out, { recursive: true });
 const serveUrl = await bundle({ entryPoint: resolve("src/index.ts") });
 const composition = await selectComposition({ serveUrl, id: "BunonDemo", inputProps: { showCaptions: true, voiceover: false } });
-const { lines } = timeline(30);
+const { lines } = timeline(30, VO);
 for (const [i, l] of lines.entries()) {
   if (only.length && !only.includes(i)) continue;
   const frame = l.from + Math.round(l.duration * 0.65);

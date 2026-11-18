@@ -69,6 +69,33 @@ async function seedAnswers(page) {
   console.log("  answers sent:", sent.join(", ") || "none (already sent?)");
 }
 
+/**
+ * A factory's own AI agent at work (local only): makes an agent token, then through the factory MCP endpoint
+ * drafts question q07 and prepares it, and shows the answer waiting on the questionnaire for a person to send.
+ */
+async function agentShot(page) {
+  const prepared = await page.evaluate(async () => {
+    const made = await (await fetch("/api/agent-tokens", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", name: "Compliance assistant" }) })).json();
+    const call = async (name, args) => {
+      const r = await fetch("/api/mcp/factory", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${made.token}` }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) });
+      return JSON.parse((await r.json()).result.content[0].text);
+    };
+    const d = await call("draft_answer", { question_id: "q07" });
+    if (!d.answer) return `q07 needs a person: ${d.reason}`;
+    const p = await call("prepare_answer", { question_id: "q07", answer: d.answer, quote: d.quote, document_id: d.document_id });
+    return p.state ?? JSON.stringify(p);
+  });
+  console.log("  agent:", prepared);
+  await open(page, `${LOCAL}/factory/questionnaire/nordlys-2026`);
+  await page.evaluate(() => {
+    const banner = [...document.querySelectorAll("main p[role='status']")].find((p) => /prepared by your AI agent/.test(p.textContent ?? ""));
+    banner?.scrollIntoView({ block: "start" });
+    window.scrollBy(0, -96); // clear the sticky top bar
+  });
+  await sleep(600);
+  await shot(page, "factory-agent");
+}
+
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
@@ -78,6 +105,13 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 
 try {
+  if (process.env.ONLY === "agent") {
+    console.log("Factory AI agent only (local)");
+    await signIn(page, LOCAL, FACTORY);
+    await seedAnswers(page);
+    await agentShot(page);
+    process.exitCode = 0;
+  } else {
   console.log("Factory (local)");
   await signIn(page, LOCAL, FACTORY);
   await seedAnswers(page);
@@ -113,6 +147,7 @@ try {
   });
   await sleep(600);
   await shot(page, "factory-reuse");
+  await agentShot(page);
 
   console.log("Factory in Bangla (local)");
   await signIn(page, LOCAL, FACTORY, "bn");
@@ -154,6 +189,7 @@ try {
   await page.evaluate(() => window.scrollBy(0, -90));
   await sleep(800);
   await shot(page, "documents-search");
+  }
 } finally {
   await browser.close();
 }

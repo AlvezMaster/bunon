@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence, staticFile, useVideoConfig } from "remotion";
-import { timeline } from "./script";
+import { timeline, VO_LEAD_S } from "./script";
+import { VO } from "./vo.generated";
 import { BgMesh, Grade, Grain, Vignette } from "./components/Layers";
 import { Caption, SegmentChip } from "./components/Captions";
 import { VisualFor } from "./scenes/Visuals";
@@ -9,14 +10,15 @@ import { VisualFor } from "./scenes/Visuals";
 export type DemoProps = {
   /** Burn the narration in as subtitles (on by default; turn off for a clean version with voice). */
   showCaptions: boolean;
-  /** Play public/voiceover.mp3 under the video once it has been recorded. */
+  /** Play the recorded voice clips (public/vo/line-NN.mp3, listed by `npm run vo`), one per line. */
   voiceover: boolean;
 };
 
 /** The 3-minute demo: five segments from src/script.ts, five-layer stack, captions on top. */
 export const BunonDemo: React.FC<DemoProps> = ({ showCaptions, voiceover }) => {
   const { fps } = useVideoConfig();
-  const tl = timeline(fps);
+  const tl = timeline(fps, VO);
+  const lead = Math.round(VO_LEAD_S * fps);
   return (
     <AbsoluteFill style={{ background: "#0B1020" }}>
       <BgMesh />
@@ -39,7 +41,14 @@ export const BunonDemo: React.FC<DemoProps> = ({ showCaptions, voiceover }) => {
         ))}
       <Grain />
       <Vignette />
-      {voiceover && <Audio src={staticFile("voiceover.mp3")} />}
+      {voiceover &&
+        tl.lines.map((l, i) =>
+          VO[i] ? (
+            <Sequence key={`a${i}`} from={l.from + lead} durationInFrames={l.duration - lead} layout="none" name={`Voice ${i + 1}`}>
+              <Audio src={staticFile(`vo/${VO[i].file}`)} playbackRate={l.rate} />
+            </Sequence>
+          ) : null
+        )}
     </AbsoluteFill>
   );
 };

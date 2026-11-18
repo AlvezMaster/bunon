@@ -236,8 +236,8 @@ const Quote: React.FC<{ dur: number }> = ({ dur }) => (
 const Models: React.FC<{ dur: number }> = ({ dur }) => (
   <AbsoluteFill style={{ ...center, flexDirection: "row", gap: 40 }}>
     {[
-      { where: "On the factory's own computer", model: "Qwen 3.5 · 4B", via: "Ollama, fully local", note: "documents never leave the factory" },
-      { where: "Our online demo", model: "Qwen 3.8 · 27B", via: "Cloudflare Workers AI", note: "fictional demo documents only" },
+      { where: "Drafting", model: "Qwen 3.5 · 4B", via: "Open model, runs locally", note: "documents can stay in the factory" },
+      { where: "Search", model: "Qwen3 · 0.6B", via: "Embeddings plus keywords", note: "English and Bangla questions" },
     ].map((m, i) => (
       <Rise key={m.where} dur={dur} delay={4 + i * 6} style={{ ...glass, width: 640, padding: "44px 48px", display: "flex", flexDirection: "column", gap: 16 }}>
         <span style={{ fontFamily: fonts.mono, fontSize: 18, letterSpacing: "0.1em", color: C.accent, textTransform: "uppercase" }}>{m.where}</span>
@@ -279,7 +279,7 @@ const Results: React.FC<{ dur: number }> = ({ dur }) => (
       {[
         { to: 16, suffix: "/16", label: "right document in the top 4", note: "16 reworded questions, 4 in Bangla", hero: true },
         { to: 0, suffix: "", label: "wrong drafts kept", note: "13 labelled questions" },
-        { to: 9, suffix: "/10", label: "correct cited answers", note: "cloud model, same checks" },
+        { to: 8, suffix: "/10", label: "correct cited answers", note: "Qwen 3.5 4B, 10 answerable questions" },
       ].map((s, i) => (
         <Rise key={s.label} dur={dur} delay={12 + i * 6} style={{ ...glass, width: 470, padding: "40px 44px", display: "flex", flexDirection: "column", gap: 10 }}>
           <Counter

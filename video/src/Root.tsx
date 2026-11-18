@@ -7,7 +7,7 @@ const defaults: DemoProps = { showCaptions: true, voiceover: false };
 
 /**
  * BunonDemo: the 3-minute preliminary video (captions on).
- * BunonDemoClean: the same without burned-in captions, for after the voice-over is recorded.
+ * BunonDemoClean: the same with the recorded voice and no burned-in captions.
  */
 export const Root: React.FC = () => (
   <>
@@ -19,7 +19,7 @@ export const Root: React.FC = () => (
       fps={FPS}
       width={1920}
       height={1080}
-      defaultProps={{ ...defaults, showCaptions: false }}
+      defaultProps={{ showCaptions: false, voiceover: true }}
     />
   </>
 );
