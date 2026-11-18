@@ -191,7 +191,7 @@ export default function FactoryBillingPage() {
               {sub.plan === "enterprise" ? (
                 <p className="text-sm text-ink-muted">
                   {t("Enterprise is priced per factory: we send you a quote and an invoice.")}{" "}
-                  <Link href="/pricing#quote" className="font-medium text-ink underline underline-offset-4">
+                  <Link href="/pricing/enterprise" className="font-medium text-ink underline underline-offset-4">
                     {t("Ask for a quote")}
                   </Link>
                 </p>
@@ -241,7 +241,7 @@ export default function FactoryBillingPage() {
                       {t("Switch to")} {t(data.plans[id].name)}
                     </button>
                   ))}
-                <Link href="/pricing#quote" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
+                <Link href="/pricing/enterprise" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
                   {t("Enterprise quote")}
                 </Link>
                 {!sub.legacy && sub.plan !== "enterprise" && (
