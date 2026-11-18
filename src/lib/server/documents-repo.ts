@@ -29,6 +29,8 @@ export interface DocumentMeta {
   uploadedBy: string;
   /** Built-in demo document (can't be deleted). */
   demo?: boolean;
+  /** The text was read from a photo or scan by an AI model, so a person should check it. */
+  fromPhoto?: boolean;
 }
 
 interface StoredText {
@@ -112,6 +114,7 @@ export interface NewDocument {
   bytes: number;
   validUntil: string | null;
   uploadedBy: string;
+  fromPhoto?: boolean;
 }
 
 /** Splits, embeds (when a model is available) and stores a document. */
@@ -133,6 +136,7 @@ export async function addDocument(d: NewDocument): Promise<DocumentMeta> {
     validUntil: d.validUntil,
     uploadedAt: new Date().toISOString(),
     uploadedBy: d.uploadedBy,
+    ...(d.fromPhoto ? { fromPhoto: true } : {}),
   };
   await kvUpdate<StoredText>(textKey(id), () => ({ text: "", passages: [] }), () => ({ text: d.text, passages: withVec }));
   await kvUpdate<DocumentMeta[]>(listKey(d.orgId), () => [], (list) => {

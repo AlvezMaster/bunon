@@ -10,6 +10,7 @@ import { sha256Hex } from "@/lib/crypto";
 import { findEvidence } from "@/lib/server/questionnaire-ai";
 import { getSubscription } from "@/lib/server/billing";
 import { PLANS } from "@/lib/plans";
+import { VisionUnavailableError, isImage, readImageText } from "@/lib/server/vision";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/documents
- *   multipart: `file` (PDF, .txt or .md, up to 4 MB), optional `title`, optional `validUntil` (YYYY-MM-DD)
+ *   multipart: `file` (PDF, .txt, .md, or a JPG/PNG/WebP photo or scan, up to 4 MB), optional `title`, optional `validUntil` (YYYY-MM-DD)
  *   JSON: { action: "delete", id }
  */
 export async function POST(req: NextRequest) {
@@ -74,15 +75,19 @@ export async function POST(req: NextRequest) {
   const lower = name.toLowerCase();
   const bytes = new Uint8Array(await file.arrayBuffer());
   let text = "";
+  const photo = isImage(lower, file.type);
   try {
     if (lower.endsWith(".pdf") || file.type === "application/pdf") text = await pdfText(bytes);
     else if (/\.(txt|md|markdown)$/.test(lower) || file.type.startsWith("text/")) text = new TextDecoder("utf-8").decode(bytes);
-    else return fail("Upload a PDF or a text file (.txt, .md).", 415);
-  } catch {
-    return fail("This file could not be read. If it is a scanned PDF, it needs a text layer.", 422);
+    else if (photo) text = (await readImageText(bytes, lower, file.type)).text;
+    else return fail("Upload a PDF, a text file (.txt, .md) or a photo (JPG, PNG).", 415);
+  } catch (error) {
+    if (error instanceof VisionUnavailableError) return fail("Photos can't be read right now because the AI model is not available. Upload a PDF or a text file instead.", 503);
+    return fail("This file could not be read. If it is a scanned PDF, upload a photo of each page instead.", 422);
   }
   text = text.replace(/\u0000/g, "").trim();
-  if (text.length < 80) return fail("This file has almost no readable text. Scanned PDFs need a text layer (OCR is not supported yet).", 422);
+  if (photo && text.length < 40) return fail("Bunon could not read enough text in this photo. Take it again flat, in good light and in focus.", 422);
+  if (!photo && text.length < 80) return fail("This file has almost no readable text. If it is a scanned PDF, upload a photo of each page instead.", 422);
   if (text.length > MAX_CHARS) text = text.slice(0, MAX_CHARS);
 
   const rawTitle = String(form.get("title") ?? "").trim();
@@ -91,13 +96,13 @@ export async function POST(req: NextRequest) {
   const validUntil = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
   const sha256 = await sha256Hex(bytes);
 
-  const meta = await addDocument({ orgId: scope.orgId, title, fileName: name, text, sha256, bytes: file.size, validUntil, uploadedBy: guard.session.name });
+  const meta = await addDocument({ orgId: scope.orgId, title, fileName: name, text, sha256, bytes: file.size, validUntil, uploadedBy: guard.session.name, fromPhoto: photo });
 
   // The ledger records that this exact file was added (its fingerprint), not its content.
   const { block } = await appendLedgerBlock({
     type: "DOCUMENT ADDED",
     actor: scope.orgNameOf(scope.orgId),
-    summary: `Document added for answering buyer questions (${meta.passages} passages${meta.embedModel ? ", searchable by meaning" : ""}). The fingerprint identifies the exact file.`,
+    summary: `Document added for answering buyer questions (${photo ? "text read from a photo by AI, " : ""}${meta.passages} passages${meta.embedModel ? ", searchable by meaning" : ""}). The fingerprint identifies the exact file.`,
     styleCode: null,
     payloadHash: sha256,
     status: "verified",

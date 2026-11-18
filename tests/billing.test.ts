@@ -77,3 +77,17 @@ test("document limits: Starter 50, Pro and Enterprise unlimited (fair use applie
   assert.equal(PLANS.enterprise.limits.documents, null);
   assert.ok(MAX_DOCUMENTS >= 1000, "the fair-use ceiling stays well above Starter's limit");
 });
+
+test("without SSLCommerz keys the test checkout runs, and a test payment is marked as a test", async () => {
+  const { gatewayStatus } = await import("../src/lib/server/sslcommerz.ts");
+  delete process.env.SSLCOMMERZ_STORE_ID;
+  assert.equal(gatewayStatus().mode, "test");
+  await startSubscription("org-testpay", "starter", "Test");
+  const p = await createPayment("org-testpay", "pro", 1, true);
+  assert.equal(p.test, true);
+  assert.equal(await settlePaid(p.tranId, { method: "TEST · bKash", bankTranId: null, valId: "TEST" }), true);
+  const { getPayment } = await import("../src/lib/server/billing.ts");
+  const saved = await getPayment(p.tranId);
+  assert.equal(saved?.test, true, "the payment history keeps the test label");
+  assert.equal(saved?.method, "TEST · bKash");
+});

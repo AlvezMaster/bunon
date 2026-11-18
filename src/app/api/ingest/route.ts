@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
           validThrough: entry.validUntil,
           documentSha256: result.documentSha256,
           ingestedAt: new Date().toISOString(),
-          engine: result.engine === "ollama" ? `${(result.model ?? "").startsWith("@cf/") ? "workers-ai" : "ollama"}:${result.model}` : "rules",
+          engine: result.engine === "ollama" ? `${(result.model ?? "").startsWith("@cf/") ? "workers-ai" : (result.model ?? "").startsWith("claude") ? "claude" : "ollama"}:${result.model}` : "rules",
         }
       : null;
 

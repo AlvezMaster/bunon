@@ -12,6 +12,7 @@
     "eval:qa": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval-questionnaire.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@supabase/supabase-js": "^2.119.0",

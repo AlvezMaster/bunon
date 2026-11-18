@@ -16,9 +16,15 @@ function config() {
   return { storeId, storePassword, live, host: live ? "https://securepay.sslcommerz.com" : "https://sandbox.sslcommerz.com" };
 }
 
-export const gatewayStatus = () => {
+/**
+ * Which checkout runs: SSLCommerz (live or sandbox) when its keys are set; otherwise Bunon's own test checkout,
+ * which shows the payment steps but takes no money (TEST_CHECKOUT=off turns it off).
+ */
+export const gatewayStatus = (): { ready: boolean; mode: "live" | "sandbox" | "test" | null } => {
   const c = config();
-  return c ? { ready: true, mode: c.live ? ("live" as const) : ("sandbox" as const) } : { ready: false, mode: null };
+  if (c) return { ready: true, mode: c.live ? "live" : "sandbox" };
+  if ((process.env.TEST_CHECKOUT ?? "").trim().toLowerCase() === "off") return { ready: false, mode: null };
+  return { ready: true, mode: "test" };
 };
 
 export interface SessionInput {

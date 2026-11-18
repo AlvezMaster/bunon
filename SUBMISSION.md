@@ -23,7 +23,7 @@ Bunon lets a Bangladeshi garment factory answer every buyer's compliance questio
 | Basic system flow (input → AI → output) | 0:34–0:52: documents → AI draft with quote → person checks → sealed record | Section 2 below |
 | Working demo | 1:00–2:00, all screens from the live product | https://bunon-ten.vercel.app |
 | Bangla / localisation | 1:49: whole workspace in Bangla; 2:00: search in English and Bangla | Language button on every page; bias check in Section 4 |
-| Impact (KPIs) | 2:30–2:50: about 3 s per draft with its source; pilot KPIs: hours saved, answers with a source, buyer follow-ups | Section 4 below |
+| Impact (KPIs) | 2:30–2:50: about 3 s per draft with its source; pilot KPIs: hours saved, answers with a source, buyer follow-ups | Section 4 below; in the app, **Questions** shows "Your results so far", counted from real answers (sent, with a source, reused, time to answer) |
 
 ---
 
@@ -36,7 +36,7 @@ A factory sells to many brands, and each brand sends its own questionnaire about
 
 ### AI architecture
 ```
-Factory documents (PDF, text) ──▶ passages (~700 chars) ──▶ hybrid search: keywords + Qwen3 embeddings,
+Factory documents (PDF, text, photos) ──▶ passages (~700 chars) ──▶ hybrid search: keywords + Qwen3 embeddings,
                                                              fused by reciprocal rank (+ Bangla glossary offline)
 Buyer's question ──────────────────────────────────────────▶ top 4 passages of THAT factory only
                                                                      │
@@ -50,9 +50,10 @@ Buyer's question ─────────────────────
                                                                      ▼
                        a person approves, edits or writes ──▶ sent to the buyer ──▶ SHA-256 hash-chained ledger
 ```
-- **Models:** Qwen 3.5 4B through Ollama on the factory's own computer; Qwen on Cloudflare Workers AI for the public website; Qwen3-Embedding 0.6B for meaning search; a small Naive Bayes decision model.
+- **Models:** Claude Sonnet 5.5 (Anthropic) drafts answers and reads photos by default when an Anthropic key is set; Qwen stays available, as Qwen 3.5 4B through Ollama on the factory's own computer or Qwen on Cloudflare Workers AI. Qwen3-Embedding 0.6B for meaning search; a small Naive Bayes decision model. Personal details are masked before any cloud call.
+- **Multimodal:** a factory can upload a photo or scan of a document (JPG, PNG). The same Qwen model reads its text (vision), copying it exactly; the document is marked "read from a photo" so a person checks it. On the factory's own computer the photo never leaves it.
 - **Agents:** a factory can connect its own AI agent through an MCP connector (`/api/mcp/factory`): 10 tools scoped to that factory; it can prepare answers but only a person can send them.
-- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 69 automated tests.
+- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 76 automated tests.
 
 ### Data and sovereignty strategy
 - **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
@@ -65,7 +66,7 @@ Buyer's question ─────────────────────
 ### Demo: a two-minute tour for judges
 1. Sign in as the factory → **Questions** → the Nordlys questionnaire → **Draft all with AI**: drafts with quoted sources; questions the documents can't answer go to a person.
 2. Still in Nordlys, draft and **send question 10** (independent building safety assessment). Then open the **Vela Outfitters** questionnaire: Vela asks the same thing in other words, and it arrives pre-filled from that answer (answer reuse).
-3. **Documents** → "Try a question" in Bangla: কারখানায় কি ১৮ বছরের কম বয়সী কেউ কাজ করে?
+3. **Documents** → "Try a question" in Bangla: কারখানায় কি ১৮ বছরের কম বয়সী কেউ কাজ করে? You can also upload a photo of a document; Qwen reads its text.
 4. **AI agents**: make a token for your own agent (MCP); its prepared answers wait for a person.
 5. Sign in as the buyer → **Questions** → one questionnaire sent to two factories, answers side by side with sources.
 6. **Pricing** (`/pricing`): plans in taka; factories sign up on a plan and pay through SSLCommerz.
@@ -108,7 +109,8 @@ Buyer's question ─────────────────────
 | Language bias check, after fixes | Bangla 8 / 10 = English 8 / 10; Bangla search on new questions 7 / 8 vs English 6 / 8 |
 | Answer reuse (40 questions from two more buyers) | 18 / 24 repeats found, 16 / 16 look-alikes left alone, **0 wrong suggestions** |
 | Draft time | about 3 s per answer (local Qwen 3.5 4B) |
-| Automated tests | 69 passing; plus an end-to-end check of the MCP connector |
+| Photo of a document (a synthetic fire licence, slightly tilted) | Licence number, dates and counts read correctly by local Qwen 3.5 4B; about 1 minute on a laptop |
+| Automated tests | 76 passing; plus an end-to-end check of the MCP connector |
 
 Details and how to rerun each test: README, "Evaluation" sections.
 
@@ -128,6 +130,7 @@ Built with Claude Code (Anthropic) as the coding assistant. Product AI: Qwen mod
 
 ## 7. Honest limits
 - Test sets are small and the documents are synthetic; real pilots are the next step.
-- Online payments run in SSLCommerz's test mode until the store is approved.
+- Photo reading has been tested on one synthetic photo so far; a person checks the text of every photo before it is used.
+- No real payments yet: until SSLCommerz is set up, a clearly labelled test checkout shows the payment steps and takes no money, and test payments are marked as tests in the payment history and activity log.
 - The certificate registry is a labelled simulation; checks against official registers are planned.
 - Bangla interface text still needs a native-speaker review.

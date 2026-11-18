@@ -29,7 +29,7 @@ interface BillingData {
   subscription: Subscription & { status: SubscriptionStatus; canSend: { ok: boolean; reason?: string }; serviceEndsAt: string | null };
   usage: { buyers: Usage; documents: Usage; agentTokens: Usage };
   payments: Payment[];
-  gateway: { ready: boolean; mode: "sandbox" | "live" | null };
+  gateway: { ready: boolean; mode: "sandbox" | "live" | "test" | null };
 }
 
 const STATUS: Record<SubscriptionStatus, { label: string; tone: Tone }> = {
@@ -47,6 +47,7 @@ const PAY_STATUS: Record<Payment["status"], { label: string; tone: Tone }> = {
 };
 const NOTICE: Record<string, { text: string; tone: "ok" | "bad" | "info" }> = {
   paid: { text: "Payment received. Thank you: your plan is active.", tone: "ok" },
+  paid_test: { text: "Test payment done: your plan is active. No money was taken.", tone: "ok" },
   failed: { text: "The payment did not go through. Nothing was charged; you can try again.", tone: "bad" },
   cancelled: { text: "You cancelled the payment. Nothing was charged.", tone: "info" },
   pending: { text: "We could not confirm the payment yet. If money left your account, it will show here within a few minutes.", tone: "info" },
@@ -225,6 +226,7 @@ export default function FactoryBillingPage() {
                   </div>
                   {!data.gateway.ready && <p className="text-sm text-warning">{t("Online payment is not switched on yet. Please try again later.")}</p>}
                   {data.gateway.mode === "sandbox" && <p className="text-xs text-ink-faint">{t("Test mode: payments use SSLCommerz's sandbox and no real money moves.")}</p>}
+                  {data.gateway.mode === "test" && <p className="text-xs text-ink-faint">{t("Test checkout: it shows how paying works and takes no money.")}</p>}
                 </>
               )}
             </section>

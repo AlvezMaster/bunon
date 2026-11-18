@@ -19,7 +19,7 @@ const STEPS: Step[] = [
     Icon: Upload,
     short: "Upload",
     title: "Upload once",
-    body: "The factory adds its licences, policies and reports, as PDF or text files.",
+    body: "The factory adds its licences, policies and reports: PDFs, text files or photos.",
     visual: (
       <div className="flex flex-wrap gap-2">
         {["fire_licence.pdf", "wage_policy.pdf", "working_hours.pdf", "grievance_procedure.md"].map((f) => (

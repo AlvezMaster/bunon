@@ -32,7 +32,7 @@ const WHY = [
   { Icon: Languages, title: "Bangla and English", text: "Staff work in Bangla; buyers read English." },
 ];
 
-const WORKING = ["Questionnaire inbox", "Bangla screens", "Answer reuse", "Your own AI agents (MCP)", "Plans and billing"];
+const WORKING = ["Questionnaire inbox", "Bangla screens", "Answer reuse", "Reads photos of documents", "Your own AI agents (MCP)", "Plans and billing"];
 
 const H2 = "font-display text-[clamp(1.85rem,3vw+0.5rem,3rem)] font-bold leading-[1.12] tracking-[-0.02em] [text-wrap:balance]";
 

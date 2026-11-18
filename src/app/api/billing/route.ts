@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET  /api/billing   the factory's plan, status, usage against its limits, payments, and whether payments work
- * POST /api/billing   { action: "checkout", plan, months } → { url } of the SSLCommerz checkout
+ * POST /api/billing   { action: "checkout", plan, months } → { url } of the SSLCommerz checkout (or the test checkout)
  *                     { action: "change_plan", plan } · { action: "cancel", cancel: boolean }
  * Factory people only: an AI agent never sees or changes billing.
  */
@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
       if (plan === "enterprise") return fail("Enterprise is priced per factory. Ask for a quote.");
       const months = Number(body.months);
       if (!(PAY_MONTHS as readonly number[]).includes(months)) return fail("Choose 1, 3, 6 or 12 months.");
-      const payment = await createPayment(orgId, plan, months);
+      const test = gatewayStatus().mode === "test";
+      const payment = await createPayment(orgId, plan, months, test);
+      // No SSLCommerz keys: Bunon's own test checkout shows the steps and takes no money.
+      if (test) return NextResponse.json({ url: `/factory/billing/checkout?tran=${encodeURIComponent(payment.tranId)}`, tranId: payment.tranId });
       const profile = await getFactoryProfile(orgId);
       const origin = req.nextUrl.origin;
       const ret = (r: string) => `${origin}/api/billing/sslcommerz?r=${r}`;

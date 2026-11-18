@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
 import { QuestionnaireList, useQuestionnaires } from "@/components/questions/shared";
+import { FactoryImpact } from "@/components/questions/Impact";
 import { t } from "@/lib/i18n";
 
 /** Factory inbox: every questionnaire a buyer has sent, newest first, with how far along each one is. */
@@ -30,6 +31,7 @@ export default function FactoryQuestionsInbox() {
           </div>
         </DashboardHeader>
         {error && <p role="alert" className="text-danger">{error}</p>}
+        {data && <FactoryImpact data={data} />}
         {data ? <QuestionnaireList data={data} hrefBase="/factory/questionnaire" /> : !error && <p className="text-ink-muted">{t("Loading…")}</p>}
       </main>
     </div>

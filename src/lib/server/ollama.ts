@@ -11,6 +11,7 @@
 import type { ExtractedCertificate } from "../extraction.ts";
 import { parseDateToIso } from "../extraction.ts";
 import { workersAiJson, workersAiModel } from "./workers-ai.ts";
+import { claudeJson, claudeModel } from "./claude.ts";
 
 export interface OllamaStatus {
   available: boolean;
@@ -41,7 +42,10 @@ export function pickModel(installed: string[], preferred: string | undefined | n
 
 export async function getOllamaStatus(force = false): Promise<OllamaStatus> {
   const now = Date.now();
-  // Online, the model is Qwen on Cloudflare Workers AI (a computer's local Ollama isn't reachable).
+  // Claude is the default when its key is set; otherwise online uses Qwen on Cloudflare Workers AI
+  // (a computer's local Ollama isn't reachable from a website), and a factory's computer uses Ollama.
+  const claude = claudeModel();
+  if (claude) return { available: true, baseUrl: "claude", model: claude, models: [claude], error: null, checkedAt: now };
   const cloud = workersAiModel();
   if (cloud) return { available: true, baseUrl: "workers-ai", model: cloud, models: [cloud], error: null, checkedAt: now };
   if (!force && statusCache && now - statusCache.checkedAt < STATUS_TTL_MS) return statusCache;
@@ -123,8 +127,8 @@ export async function extractCertificateWithOllama(
 
   const clipped = text.length > 12_000 ? `${text.slice(0, 12_000)}\n[... truncated ...]` : text;
   const started = Date.now();
-  if (status.baseUrl === "workers-ai") {
-    const reply = await workersAiJson(SYSTEM_PROMPT, `CERTIFICATE TEXT:\n"""\n${clipped}\n"""`, EXTRACTION_SCHEMA, options.timeoutMs ?? 60_000);
+  if (status.baseUrl === "workers-ai" || status.baseUrl === "claude") {
+    const reply = await (status.baseUrl === "claude" ? claudeJson : workersAiJson)(SYSTEM_PROMPT, `CERTIFICATE TEXT:\n"""\n${clipped}\n"""`, EXTRACTION_SCHEMA, options.timeoutMs ?? 60_000);
     return { extracted: toExtracted(JSON.parse(reply.content) as Record<string, unknown>), model, durationMs: Date.now() - started, promptTokens: reply.promptTokens, completionTokens: reply.completionTokens };
   }
   const res = await fetch(`${status.baseUrl}/api/chat`, {

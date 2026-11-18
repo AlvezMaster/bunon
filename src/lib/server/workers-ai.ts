@@ -81,3 +81,34 @@ export async function workersAiJson(system: string, user: string, schema: object
   const body = content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1);
   return { content: masker.unmaskJson(body || content), promptTokens: r.usage?.prompt_tokens ?? null, completionTokens: r.usage?.completion_tokens ?? null };
 }
+
+/**
+ * Reads the text in an image (a photo or scan of a document). The image itself can't be masked, so this is
+ * used only when a person uploads a photo; the text it returns is masked like any other in later calls.
+ * WORKERS_AI_VISION_MODEL picks the model (default: the drafting model, which reads images).
+ */
+export async function workersAiReadImage(prompt: string, dataUrl: string, timeoutMs = 90_000): Promise<{ text: string; model: string }> {
+  const c = config();
+  if (!c) throw new Error("Workers AI is not configured.");
+  const model = process.env.WORKERS_AI_VISION_MODEL?.trim() || c.model;
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${c.account}/ai/run/${model}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(timeoutMs),
+    cache: "no-store",
+    body: JSON.stringify({
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: dataUrl } }] }],
+      temperature: 0,
+      max_completion_tokens: 2000,
+      chat_template_kwargs: { enable_thinking: false },
+    }),
+  });
+  const json = (await res.json().catch(() => null)) as {
+    success?: boolean;
+    errors?: Array<{ message?: string }>;
+    result?: { response?: unknown; choices?: Array<{ message?: { content?: string | null } }> };
+  } | null;
+  if (!res.ok || !json?.success || !json.result) throw new Error(json?.errors?.[0]?.message ?? `Workers AI returned HTTP ${res.status}`);
+  const r = json.result;
+  return { text: r.choices?.[0]?.message?.content ?? (typeof r.response === "string" ? r.response : ""), model };
+}

@@ -29,6 +29,8 @@ export interface Payment {
   method: string | null;
   bankTranId: string | null;
   valId: string | null;
+  /** Made in the test checkout: no money was taken. */
+  test?: boolean;
 }
 
 export interface QuoteRequest {
@@ -96,7 +98,7 @@ export async function setCancelAtPeriodEnd(orgId: string, cancel: boolean, actor
 }
 
 /** A pending payment for `months` of `plan`; its tran_id goes to SSLCommerz. */
-export async function createPayment(orgId: string, plan: PlanId, months: number): Promise<Payment> {
+export async function createPayment(orgId: string, plan: PlanId, months: number, test = false): Promise<Payment> {
   const amount = priceFor(plan, months);
   if (amount === null) throw new KvAbort("Enterprise is priced per factory. Ask for a quote.");
   const p: Payment = {
@@ -111,6 +113,7 @@ export async function createPayment(orgId: string, plan: PlanId, months: number)
     method: null,
     bankTranId: null,
     valId: null,
+    ...(test ? { test: true } : {}),
   };
   await kvUpdate<Record<string, Payment>>(PAYMENTS, payNone, (all) => {
     all[p.tranId] = p;
@@ -148,7 +151,7 @@ export async function settlePaid(tranId: string, ref: { method: string | null; b
     const cur = all[p.orgId] ?? newSubscription(p.orgId, p.plan);
     all[p.orgId] = { ...cur, plan: p.plan, legacy: undefined, paidUntil: extendPaidUntil(cur, p.months), cancelAtPeriodEnd: false, updatedAt: new Date().toISOString() };
   });
-  await log(p.orgId, "SSLCommerz", "SUBSCRIPTION PAID", `${PLANS[p.plan].name} plan paid for ${p.months} month${p.months > 1 ? "s" : ""} (${formatBdt(p.amountBdt)}), reference ${p.tranId}.`);
+  await log(p.orgId, p.test ? "Test checkout" : "SSLCommerz", "SUBSCRIPTION PAID", `${p.test ? "Test payment, no money taken: " : ""}${PLANS[p.plan].name} plan paid for ${p.months} month${p.months > 1 ? "s" : ""} (${formatBdt(p.amountBdt)}), reference ${p.tranId}.`);
   return true;
 }
 

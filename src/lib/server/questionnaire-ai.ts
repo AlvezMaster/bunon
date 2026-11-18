@@ -19,6 +19,7 @@ import { loadCorpus } from "./documents-repo.ts";
 import { embed } from "./embeddings.ts";
 import { dequantize, hybridSearch, quantize } from "../rag.ts";
 import { workersAiJson } from "./workers-ai.ts";
+import { claudeJson } from "./claude.ts";
 import { kvRead, kvUpdate } from "./kv.ts";
 import { sha256Hex } from "../crypto.ts";
 
@@ -67,7 +68,8 @@ export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">, 
   const started = Date.now();
   const { corpus, evidence } = await findEvidence(orgId, question.text);
   const status = await getOllamaStatus();
-  const cloud = status.baseUrl === "workers-ai";
+  const cloud = status.baseUrl === "workers-ai" || status.baseUrl === "claude";
+  const callCloud = status.baseUrl === "claude" ? claudeJson : workersAiJson;
   const model = pickQaModel(status.models, status.model, cloud);
   if (!status.available || !model) return ruleDraft(question, Date.now() - started, evidence);
 
@@ -81,7 +83,7 @@ export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">, 
     const key = await sha256Hex(`${model}\n${userMessage}`);
     const cached = (await kvRead<Record<string, { at: number; raw: ModelDraft }>>(CACHE_KEY, () => ({})))[key];
     try {
-      const raw = cached && Date.now() - cached.at < CACHE_DAYS * 864e5 ? cached.raw : (JSON.parse((await workersAiJson(SYSTEM, userMessage, SCHEMA, 60_000)).content) as ModelDraft);
+      const raw = cached && Date.now() - cached.at < CACHE_DAYS * 864e5 ? cached.raw : (JSON.parse((await callCloud(SYSTEM, userMessage, SCHEMA, 60_000)).content) as ModelDraft);
       if (!cached) {
         await kvUpdate<Record<string, { at: number; raw: ModelDraft }>>(CACHE_KEY, () => ({}), (all) => {
           all[key] = { at: Date.now(), raw };
@@ -89,7 +91,7 @@ export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">, 
           for (const k of Object.keys(all).sort((a, b) => all[a].at - all[b].at).slice(0, Math.max(0, Object.keys(all).length - 400))) delete all[k];
         });
       }
-      return finalizeDraft(question.id, question.text, raw, evidence, `workers-ai:${model}`, Date.now() - started, decision, corpus.docs);
+      return finalizeDraft(question.id, question.text, raw, evidence, `${status.baseUrl}:${model}`, Date.now() - started, decision, corpus.docs);
     } catch (error) {
       console.warn("[bunon/questionnaire] cloud draft failed, using rules:", (error as Error).message);
       return ruleDraft(question, Date.now() - started, evidence);
