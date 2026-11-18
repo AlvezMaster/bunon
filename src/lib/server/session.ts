@@ -23,6 +23,13 @@ export interface SessionPayload {
 }
 
 export const SESSION_COOKIE_NAME = "bunon_session";
+
+/**
+ * Sessions made for a factory's AI agent (see agent-tokens.ts and /api/mcp/factory) have a subject starting with
+ * "agent:". Routes refuse them for anything a person must do: sending answers, links, invites, uploads, orders.
+ */
+export const AGENT_SUBJECT_PREFIX = "agent:";
+export const isAgentSession = (s: Pick<SessionPayload, "sub">) => s.sub.startsWith(AGENT_SUBJECT_PREFIX);
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 const DEV_FALLBACK_SECRET = "bunon-dev-only-insecure-secret-set-BUNON_SESSION_SECRET";

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession, requireSession } from "@/lib/server/auth";
+import { isAgentSession } from "@/lib/server/session";
 import { getCatalogState, resetStyle, saveCustomStyle } from "@/lib/server/catalog-repo";
 import { STYLES_CATALOG, getStyleData, normalizeStyleCode, type StyleData, type TierId, type TierRenewal } from "@/lib/styles";
 import { canSeeStyle, isLiveWith, scopeFor, styleParties } from "@/lib/server/access";
@@ -33,6 +34,8 @@ type Body =
 export async function POST(req: NextRequest) {
   const guard = requireSession(req, ["factory"]);
   if (!guard.ok) return guard.response;
+  // Orders and renewals are recorded by a person, never by an AI agent.
+  if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });
   const scope = await scopeFor(guard.session);
 
   let body: Body;

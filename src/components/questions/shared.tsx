@@ -39,6 +39,16 @@ export interface Reuse {
   how: "same" | "words" | "meaning";
   topic: string;
 }
+/** Factory only: an answer the factory's AI agent prepared, waiting for a person to check and send. */
+export interface Prepared {
+  questionId: string;
+  answer: string;
+  quote: string;
+  docId: string | null;
+  docTitle: string | null;
+  preparedBy: string;
+  preparedAt: string;
+}
 export interface Question {
   id: string;
   /** Same for this question in every factory's copy of the questionnaire. */
@@ -70,6 +80,8 @@ export interface Payload {
   answers: Record<string, Approved>;
   /** Factory only: question id → an earlier answer that can be reused. */
   reuse?: Record<string, Reuse>;
+  /** Factory only: question id → an answer its AI agent prepared. */
+  prepared?: Record<string, Prepared>;
   model: string | null;
 }
 

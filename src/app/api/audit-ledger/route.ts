@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LedgerValidationError, parseLedgerInput, type LedgerBlockInput } from "@/lib/ledger";
 import { canAppendEvent } from "@/lib/ledger-policy";
 import { getSession, requireSession } from "@/lib/server/auth";
+import { isAgentSession } from "@/lib/server/session";
 import { appendLedgerBlock, listLedger } from "@/lib/server/ledger-repo";
 import { canSeeStyle, questionnaireParties, scopeFor, styleParties } from "@/lib/server/access";
 import { getBlockParties, recordBlockParties } from "@/lib/server/ledger-parties";
@@ -57,6 +58,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const guard = requireSession(req);
   if (!guard.ok) return guard.response;
+  // An AI agent never writes ledger entries directly; its prepared drafts are logged by the questionnaire API.
+  if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });
 
   let raw: unknown;
   try {

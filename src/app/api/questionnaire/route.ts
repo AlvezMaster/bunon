@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { getSession, requireSession } from "@/lib/server/auth";
+import { isAgentSession } from "@/lib/server/session";
+import { clearPrepared, getPrepared, savePrepared } from "@/lib/server/prepared-repo";
 import { draftAnswer } from "@/lib/server/questionnaire-ai";
 import { getCatalogState, saveAnswer, saveAskedQuestion, type CatalogState } from "@/lib/server/catalog-repo";
 import { canSeeQuestionnaire, isLiveWith, questionnaireParties, scopeFor, takesQuestionsWith, type Scope } from "@/lib/server/access";
@@ -79,6 +81,11 @@ export async function GET(req: NextRequest) {
         .filter(([id]) => ids.has(id))
         .map(([id, a]) => [id, session.role === "factory" ? a : { ...a, reusedFrom: undefined }])
     ),
+    // Factory only: answers its AI agent prepared (waiting for a person to send them).
+    prepared:
+      session.role === "factory"
+        ? Object.fromEntries(Object.entries(await getPrepared()).filter(([id]) => ids.has(id) && !state.answers?.[id]))
+        : {},
     // Factory only: unanswered questions that an answer it already sent to another buyer also answers.
     reuse:
       session.role === "factory"
@@ -95,14 +102,16 @@ type Body =
   | { action: "create"; title: string; dueOn?: string; questions: string[]; factoryOrgIds: string[] }
   | { action: "ask"; groupId?: string; questionnaireId?: string; text: string }
   | { action: "draft"; questionId: string }
-  | { action: "approve"; questionId: string; answer: string; quote?: string; docId?: string | null; aiDrafted?: boolean; reusedFrom?: string };
+  | { action: "approve"; questionId: string; answer: string; quote?: string; docId?: string | null; aiDrafted?: boolean; reusedFrom?: string }
+  | { action: "prepare"; questionId: string; answer: string; quote?: string; docId?: string | null };
 
 const cleanQuestion = (t: unknown) => (typeof t === "string" ? t.trim().replace(/\s+/g, " ") : "");
 
 /**
  * POST /api/questionnaire
  *   buyer:   "create" a questionnaire for one or more linked factories; "ask" a new question of every factory in it
- *   factory: "draft" an answer from its documents; "approve" (send) an answer
+ *   factory: "draft" an answer from its documents; "prepare" one for a person to check (its AI agent);
+ *            "approve" (send) an answer, which only a person can do
  */
 export async function POST(req: NextRequest) {
   const guard = requireSession(req);
@@ -182,7 +191,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ draft: await draftAnswer(question, scope.orgId) });
   }
 
+  if (body.action === "prepare") {
+    const answer = typeof body.answer === "string" ? body.answer.trim() : "";
+    const quote = typeof body.quote === "string" ? body.quote.trim() : "";
+    if (!answer || answer.length > 500) return fail("Write an answer (up to 500 characters).");
+    if (state.answers?.[question.id]) return fail("This question is already answered.", 409);
+    const { docs } = await loadCorpus(scope.orgId);
+    const doc = body.docId ? docs.find((d) => d.id === body.docId) : undefined;
+    // The same rule as for sending: a cited quote must really be in the cited document.
+    if (quote && (!doc || !quoteIsInDocument(quote, doc.id, docs))) return fail("The quoted sentence is not in the cited document.");
+    await savePrepared({ questionId: question.id, answer, quote: doc ? quote : "", docId: doc?.id ?? null, docTitle: doc?.title ?? null, preparedBy: session.name, preparedAt: new Date().toISOString() });
+    const { block } = await appendLedgerBlock({
+      type: "AGENT DRAFT PREPARED",
+      actor: session.name,
+      summary: `Draft prepared for question ${question.id} (${doc ? "cites a document" : "no source"}); waiting for a person at ${scope.orgNameOf(scope.orgId)} to check and send it.`,
+      styleCode: null,
+      payloadHash: null,
+      status: "verified",
+    });
+    await recordBlockParties(block.block, [parties.factory]);
+    return NextResponse.json({ prepared: { questionId: question.id, waitingForPerson: true } });
+  }
+
   if (body.action === "approve") {
+    // Sending an answer to a buyer is always a person's decision, never an AI agent's.
+    if (isAgentSession(session)) return fail("Only a person can send an answer. Prepare it instead; a person checks and sends it in Bunon.", 403);
     const answer = typeof body.answer === "string" ? body.answer.trim() : "";
     const quote = typeof body.quote === "string" ? body.quote.trim() : "";
     const { docs } = await loadCorpus(scope.orgId);
@@ -211,6 +244,7 @@ export async function POST(req: NextRequest) {
     await recordBlockParties(block.block, [parties.factory, parties.buyer]);
     const saved = { ...sealed, docTitle: doc?.title ?? null, approvedBy: guard.session.name, approvedAt: new Date().toISOString(), ledgerBlock: block.block, aiDrafted: body.aiDrafted === true, reusedFrom };
     await saveAnswer(saved);
+    await clearPrepared([question.id]);
     return NextResponse.json({ approved: saved });
   }
 

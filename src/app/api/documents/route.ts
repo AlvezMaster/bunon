@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/server/auth";
+import { isAgentSession } from "@/lib/server/session";
 import { scopeFor } from "@/lib/server/access";
 import { MAX_DOCUMENTS, addDocument, deleteDocument, listDocuments } from "@/lib/server/documents-repo";
 import { embeddingModel } from "@/lib/server/embeddings";
@@ -51,10 +52,13 @@ export async function POST(req: NextRequest) {
       const title = (id: string) => corpus.docs.find((d) => d.id === id)?.title ?? id;
       return NextResponse.json({ meaning, passages: evidence.map((p) => ({ docId: p.docId, title: title(p.docId), text: p.text, via: p.via })) });
     }
+    // Search is read-only and open to the factory's AI agent; deleting and uploading stay with a person.
+    if (isAgentSession(guard.session)) return fail("Only a person can do this in Bunon.", 403);
     if (body?.action !== "delete" || typeof body.id !== "string") return fail("Unknown action.");
     return (await deleteDocument(scope.orgId, body.id)) ? NextResponse.json({ ok: true }) : fail("That document can't be deleted.", 404);
   }
 
+  if (isAgentSession(guard.session)) return fail("Only a person can do this in Bunon.", 403);
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return fail("Choose a file to upload.");

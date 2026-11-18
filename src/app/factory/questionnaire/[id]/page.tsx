@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { FileText, Info, PenLine, RefreshCw, Repeat2, Send, Sparkles } from "lucide-react";
+import { Bot, FileText, Info, PenLine, RefreshCw, Repeat2, Send, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import {
   QuestionHead,
@@ -70,7 +70,7 @@ export default function FactoryQuestionnaire() {
   const draftAll = async () => {
     if (!q || !data) return;
     // Questions with an answer ready from an earlier buyer are already filled in.
-    const todo = q.questions.filter((x) => !data.answers[x.id] && edits[x.id] === undefined && !data.reuse?.[x.id]);
+    const todo = q.questions.filter((x) => !data.answers[x.id] && edits[x.id] === undefined && !data.reuse?.[x.id] && !data.prepared?.[x.id]);
     setBulk({ done: 0, total: todo.length });
     for (let i = 0; i < todo.length; i++) {
       await draft(todo[i].id);
@@ -81,9 +81,10 @@ export default function FactoryQuestionnaire() {
 
   const send = async (qid: string) => {
     const d = drafts[qid];
-    // An earlier answer stays in use until the factory asks for a fresh draft.
-    const r = d ? undefined : data?.reuse?.[qid];
-    const text = (edits[qid] ?? r?.answer ?? "").trim();
+    // An agent-prepared or earlier answer stays in use until the factory asks for a fresh draft.
+    const p = d ? undefined : data?.prepared?.[qid];
+    const r = d || p ? undefined : data?.reuse?.[qid];
+    const text = (edits[qid] ?? p?.answer ?? r?.answer ?? "").trim();
     if (!text) {
       setRowError((e) => ({ ...e, [qid]: t("Write an answer first.") }));
       return;
@@ -98,8 +99,8 @@ export default function FactoryQuestionnaire() {
           action: "approve",
           questionId: qid,
           answer: text,
-          quote: cited ? d.quote : r ? r.quote : "",
-          docId: cited ? d.docId : r ? r.docId : null,
+          quote: cited ? d.quote : p ? p.quote : r ? r.quote : "",
+          docId: cited ? d.docId : p ? p.docId : r ? r.docId : null,
           aiDrafted: !!cited && text === answerText(d),
           reusedFrom: r?.fromQuestionId,
         }),
@@ -118,7 +119,8 @@ export default function FactoryQuestionnaire() {
   const todo = numbered.filter((x) => !data?.answers[x.id]);
   const sent = numbered.filter((x) => data?.answers[x.id]);
   const shown = tab === "todo" ? todo : sent;
-  const ready = closed ? 0 : todo.filter((x) => data?.reuse?.[x.id] && !drafts[x.id]).length;
+  const ready = closed ? 0 : todo.filter((x) => data?.reuse?.[x.id] && !data?.prepared?.[x.id] && !drafts[x.id]).length;
+  const preparedCount = closed ? 0 : todo.filter((x) => data?.prepared?.[x.id] && !drafts[x.id]).length;
 
   return (
     <div className="min-h-screen bg-canvas pb-24">
@@ -177,6 +179,18 @@ export default function FactoryQuestionnaire() {
               </p>
             )}
 
+            {preparedCount > 0 && (
+              <p role="status" className="flex items-start gap-2 rounded-lg border border-brand/30 bg-brand-soft px-4 py-3 text-sm text-ink-muted">
+                <Bot className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <span>
+                  <strong className="text-ink">
+                    {preparedCount} {preparedCount === 1 ? t("answer was prepared by your AI agent.") : t("answers were prepared by your AI agent.")}
+                  </strong>{" "}
+                  {t("Nothing has reached the buyer. Check each one, then send.")}
+                </span>
+              </p>
+            )}
+
             {ready > 0 && (
               <p role="status" className="flex items-start gap-2 rounded-lg border border-brand/30 bg-brand-soft px-4 py-3 text-sm text-ink-muted">
                 <Repeat2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
@@ -208,7 +222,8 @@ export default function FactoryQuestionnaire() {
               {shown.map((x) => {
                 const approved = data.answers[x.id];
                 const d = drafts[x.id];
-                const r = d ? undefined : data.reuse?.[x.id];
+                const p = d ? undefined : data.prepared?.[x.id];
+                const r = d || p ? undefined : data.reuse?.[x.id];
                 const state = busy[x.id];
                 const editing = edits[x.id] !== undefined;
                 const doc = d?.status === "draft" ? docOf(d.docId) : undefined;
@@ -221,7 +236,7 @@ export default function FactoryQuestionnaire() {
                       <SentAnswer a={approved} doc={docOf(approved.docId)} />
                     ) : closed ? (
                       <p className="text-sm text-ink-faint">{t("Not answered before the unlink.")}</p>
-                    ) : !editing && !d && !r ? (
+                    ) : !editing && !d && !r && !p ? (
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -247,6 +262,22 @@ export default function FactoryQuestionnaire() {
                       </div>
                     ) : (
                       <div className="space-y-3">
+                        {p && (
+                          <div className="space-y-2 rounded-lg border border-brand/30 bg-brand-soft px-3 py-2.5 text-sm text-ink-muted">
+                            <p className="flex items-center gap-1.5 font-semibold text-ink">
+                              <Bot className="h-4 w-4 text-brand" aria-hidden="true" />
+                              {t("Prepared by")} {p.preparedBy}
+                            </p>
+                            {p.quote && <blockquote className="border-l-2 border-success pl-3 italic">“{p.quote}”</blockquote>}
+                            {p.docTitle && (
+                              <p className="flex items-center gap-1.5 text-ink-faint">
+                                <FileText className="h-4 w-4" aria-hidden="true" />
+                                {t("From")} {t(p.docTitle)}
+                              </p>
+                            )}
+                            <p className="text-ink-faint">{t("Check that it fits this question before you send it.")}</p>
+                          </div>
+                        )}
                         {r && (
                           <div className="space-y-2 rounded-lg border border-brand/30 bg-brand-soft px-3 py-2.5 text-sm text-ink-muted">
                             <p className="flex items-center gap-1.5 font-semibold text-ink">
@@ -296,7 +327,7 @@ export default function FactoryQuestionnaire() {
                             {t("Your answer to")} {buyer}
                           </span>
                           <textarea
-                            value={edits[x.id] ?? r?.answer ?? ""}
+                            value={edits[x.id] ?? p?.answer ?? r?.answer ?? ""}
                             onChange={(e) => setEdits((v) => ({ ...v, [x.id]: e.target.value }))}
                             rows={2}
                             placeholder={t("Write the answer the buyer will see")}
@@ -315,7 +346,7 @@ export default function FactoryQuestionnaire() {
                             className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 text-sm font-medium text-ink-muted hover:text-ink"
                           >
                             <RefreshCw className={`h-4 w-4 ${state === "drafting" ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
-                            {d ? t("Draft again") : r ? t("Draft fresh instead") : ai ? t("Draft with AI") : t("Suggest from documents")}
+                            {d ? t("Draft again") : r || p ? t("Draft fresh instead") : ai ? t("Draft with AI") : t("Suggest from documents")}
                           </button>
                         </div>
                         {d && (

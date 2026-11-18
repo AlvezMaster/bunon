@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/server/auth";
+import { isAgentSession } from "@/lib/server/session";
 import { scopeFor } from "@/lib/server/access";
 import { acceptInvite, applyLinkStep, createInvite, getFactoryProfile, invitesForFactory, revokeInvite } from "@/lib/server/accounts-repo";
 import { logLinkEvent, runLinkJobs } from "@/lib/server/lifecycle";
@@ -54,6 +55,8 @@ type Body =
 export async function POST(req: NextRequest) {
   const guard = requireSession(req);
   if (!guard.ok) return guard.response;
+  // Links and invites are a person's decision, never an AI agent's.
+  if (isAgentSession(guard.session)) return NextResponse.json({ error: "Only a person can do this in Bunon." }, { status: 403 });
   let body: Body;
   try {
     body = (await req.json()) as Body;

@@ -43,6 +43,30 @@ draft answer with quote ───────────▶        /api/questio
 3. **Answer memory (answer every buyer once).** When a second buyer asks something the factory already answered for another buyer, the earlier approved answer is filled in, with its quote and source. A small question graph links every question to compliance topics (fire safety, wages, child labour, … in English and Bangla). An answer is reused only when both questions share a topic, ask the same kind of thing (yes/no or a value), agree on negatives, numbers and time periods, and are worded alike (shared words, or meaning through embeddings plus some shared words). The quoted sentence must still be in the factory's documents, only the factory's own answers are used, and a person still checks and sends each one. Buyers never see that an answer was reused or for whom. Rules and tests: `src/lib/answer-reuse.ts`, `tests/answer-reuse.test.ts`.
 4. **Ledger.** Every check, approval and link event is a block in a SHA-256 hash chain. The database refuses to edit or delete blocks. Blocks hold company ids and fingerprints, not answer text, so shared answers can be deleted later while the proof stays.
 5. **Accounts and links.** Buyers sign up with email and passphrase; factories add a self-declared profile. A factory invites a buyer with a single-use link (7 days). Either side can unlink alone; nothing changes for 12 hours (undo window), then both can download a ZIP of the shared data for 30 days, after which shared answers are deleted.
+6. **The factory's own AI agent (MCP).** A factory that runs its own AI agent can connect it to Bunon (see below). The agent works inside that factory's data only and can prepare answers, but a person still sends them.
+
+## Connect a factory's AI agent (MCP)
+
+Endpoint: `POST /api/mcp/factory`, Model Context Protocol over JSON-RPC (protocol 2024-11-05). A person at the factory makes an agent token on the **AI agents** page (`/factory/agents`). The token is shown once; Bunon stores only its SHA-256 hash; the factory can have up to 5 and revoke any of them at once. The agent sends `Authorization: Bearer bnn_agent_…`.
+
+```json
+{ "mcpServers": { "bunon": { "url": "https://<your-bunon-site>/api/mcp/factory", "headers": { "Authorization": "Bearer <agent token>" } } } }
+```
+
+| Tool | What it does |
+|---|---|
+| `get_overview` | Buyers, open questionnaires, unanswered questions, answers ready to reuse or prepared, documents on file |
+| `list_questionnaires`, `get_questionnaire` | Questionnaires and each question's state: sent (with answer and source), prepared, ready from an earlier answer, or open |
+| `list_documents`, `search_documents` | The factory's documents, and hybrid search over them (English or Bangla) |
+| `draft_answer` | A draft from the factory's documents with its verified quote, after Bunon's checks; saves nothing |
+| `prepare_answer` | Leaves an answer for a person to check and send; a quote must be in the cited document |
+| `list_buyers` | Linked buyers, unlink states and invites (never the invite links) |
+| `get_activity_log` | The factory's tamper-evident log, and whether the chain verifies |
+| `list_orders` | Orders and whether every supplier certificate is in date |
+
+**How it stays safe.** Each tool calls the same API handler the web app uses, with a 5-minute session signed for the agent (`agent:<token id>`, that factory only), so the agent sees exactly what a person at the factory sees through `src/lib/server/access.ts`, and nothing more. Sending an answer, linking, unlinking or inviting buyers, uploading or deleting documents, adding orders and writing ledger entries are refused for agent sessions on the server, and no tool offers them. Making or revoking a token and every prepared answer are recorded in the factory's ledger. Code: `src/lib/server/factory-mcp.ts`, `src/lib/server/agent-tokens.ts`, `src/app/api/mcp/factory/route.ts`. Tests: `tests/agent-tokens.test.ts`, and `node scripts/check-factory-mcp.mjs` against a local dev server (every tool, no token or a wrong token refused, another factory's questionnaire not found, made-up quotes refused, a revoked token stops working).
+
+The older `/api/mcp` endpoint is the buyer-side demo: read-only tools over the demo order catalog.
 
 ## Responsible AI
 

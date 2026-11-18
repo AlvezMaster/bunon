@@ -12,6 +12,9 @@ const EVENT_LABEL: Record<string, string> = {
   "ORDER BOM INGESTION": "New order",
   "ANSWER APPROVED": "Answer approved",
   "DOCUMENT ADDED": "Document added",
+  "AGENT TOKEN CREATED": "Agent token made",
+  "AGENT TOKEN REVOKED": "Agent token revoked",
+  "AGENT DRAFT PREPARED": "Draft prepared by AI agent",
 };
 
 export function eventLabel(type: string): string {
