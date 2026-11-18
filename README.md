@@ -72,8 +72,8 @@ The older `/api/mcp` endpoint is the buyer-side demo: read-only tools over the d
 
 | Plan | Price (BDT) | Limits |
 |---|---|---|
-| Starter | 1 month free, then ৳3,500 a month | 3 linked buyers, 20 documents, no AI agents |
-| Pro | ৳7,500 a month | unlimited buyers, 50 documents, up to 5 AI agent tokens |
+| Starter | 1 month free, then ৳3,500 a month | 3 linked buyers, 50 documents, no AI agents |
+| Pro | ৳7,500 a month | unlimited buyers, unlimited documents (fair use: 1,000), up to 5 AI agent tokens |
 | Enterprise | quoted per customer (form on `/pricing`) | agreed per contract |
 
 - **Sign-up:** `/pricing` → `/signup?plan=…` creates the factory account on that plan. Starter starts its free month; Pro and Enterprise go to `/factory/billing`.

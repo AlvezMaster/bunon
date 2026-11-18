@@ -25,8 +25,8 @@ export const PLANS: Record<PlanId, Plan> = {
     priceBdt: 3500,
     trialDays: 30,
     tagline: "For a factory getting started",
-    limits: { buyers: 3, documents: 20, agentTokens: 0 },
-    features: ["1 month free, no payment needed to start", "Up to 3 linked buyers", "Up to 20 documents", "AI drafts with their source, and answer reuse", "Bangla and English", "Tamper-evident activity log"],
+    limits: { buyers: 3, documents: 50, agentTokens: 0 },
+    features: ["1 month free, no payment needed to start", "Up to 3 linked buyers", "Up to 50 documents", "AI drafts with their source, and answer reuse", "Bangla and English", "Tamper-evident activity log"],
   },
   pro: {
     id: "pro",
@@ -34,8 +34,8 @@ export const PLANS: Record<PlanId, Plan> = {
     priceBdt: 7500,
     trialDays: 0,
     tagline: "For factories with many buyers",
-    limits: { buyers: null, documents: 50, agentTokens: 5 },
-    features: ["Everything in Starter", "Unlimited linked buyers", "Up to 50 documents", "Connect your own AI agents (MCP)", "Priority support"],
+    limits: { buyers: null, documents: null, agentTokens: 5 },
+    features: ["Everything in Starter", "Unlimited linked buyers", "Unlimited documents", "Connect your own AI agents (MCP)", "Priority support"],
   },
   enterprise: {
     id: "enterprise",
@@ -43,7 +43,7 @@ export const PLANS: Record<PlanId, Plan> = {
     priceBdt: null,
     trialDays: 0,
     tagline: "For groups and large factories",
-    limits: { buyers: null, documents: 50, agentTokens: 5 },
+    limits: { buyers: null, documents: null, agentTokens: 5 },
     features: ["Everything in Pro", "Price based on your needs", "AI that runs on your own computers", "Onboarding and training for your team", "Agreed support terms"],
   },
 };

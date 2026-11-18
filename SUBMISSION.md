@@ -90,8 +90,8 @@ Buyer's question ─────────────────────
 ## 3. Business model
 | Plan | Price | For |
 |---|---|---|
-| Starter | first month free, then ৳3,500 / month | one factory, up to 3 buyers, 20 documents |
-| Pro | ৳7,500 / month | unlimited buyers, 50 documents, the factory's own AI agents |
+| Starter | first month free, then ৳3,500 / month | one factory, up to 3 buyers, 50 documents |
+| Pro | ৳7,500 / month | unlimited buyers, unlimited documents, the factory's own AI agents |
 | Enterprise | quote | groups and large factories, AI on their own computers, training |
 
 - **Buyers are always free**, so each buyer brings its factories: the network grows from the buyer side.

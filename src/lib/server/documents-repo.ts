@@ -36,7 +36,8 @@ interface StoredText {
   passages: Passage[];
 }
 
-export const MAX_DOCUMENTS = 50;
+/** Fair-use ceiling per factory: plans with unlimited documents still stop here, so one account cannot slow search for everyone. */
+export const MAX_DOCUMENTS = 1000;
 const listKey = (orgId: string) => `docs:${orgId}`;
 const textKey = (docId: string) => `doc:${docId}`;
 const FIXTURE_VEC_KEY = (model: string) => `docvec:fixtures:${model}`;

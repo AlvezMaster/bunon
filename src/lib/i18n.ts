@@ -449,6 +449,10 @@ const BN: Record<string, string> = {
   "Connect your own AI agent (MCP)": "নিজের এআই এজেন্ট যুক্ত করুন (MCP)",
   "Plans and billing in taka (payments in test mode)": "টাকায় প্ল্যান ও বিল (পরিশোধ পরীক্ষামূলক মোডে)",
   // Plans and billing
+  "Unlimited documents": "সীমাহীন নথি",
+  "Unlimited (fair use)": "সীমাহীন (ন্যায্য ব্যবহার)",
+  "You have reached the fair-use limit of 1,000 documents. Contact us to raise it.": "আপনি ১,০০০ নথির ন্যায্য ব্যবহারের সীমায় পৌঁছেছেন। সীমা বাড়াতে আমাদের সাথে যোগাযোগ করুন।",
+  "Your plan allows up to 50 documents. Upgrade to Pro on the Billing page, or delete one first.": "আপনার প্ল্যানে সর্বোচ্চ ৫০টি নথি রাখা যায়। বিল পাতায় প্রো-তে যান, বা আগে একটি মুছে দিন।",
   "Compare": "তুলনা",
   "Pricing pages": "মূল্যের পাতা",
   "Simple plans for every factory": "প্রতিটি কারখানার জন্য সহজ প্ল্যান",

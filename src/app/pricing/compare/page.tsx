@@ -18,7 +18,7 @@ const ROWS: Array<{ label: string; cells: [Cell, Cell, Cell] }> = [
   { label: "Price", cells: [price("starter"), price("pro"), price("enterprise")] },
   { label: "Free first month", cells: [true, false, false] },
   { label: "Linked buyers", cells: [limit(PLANS.starter.limits.buyers), limit(PLANS.pro.limits.buyers), "Unlimited"] },
-  { label: "Documents", cells: [limit(PLANS.starter.limits.documents), limit(PLANS.pro.limits.documents), "Agreed with you"] },
+  { label: "Documents", cells: [limit(PLANS.starter.limits.documents), "Unlimited (fair use)", "Unlimited (fair use)"] },
   { label: "AI drafts with their source", cells: [true, true, true] },
   { label: "Answer reuse across buyers", cells: [true, true, true] },
   { label: "Bangla and English", cells: [true, true, true] },

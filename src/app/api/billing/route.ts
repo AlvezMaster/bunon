@@ -4,7 +4,7 @@ import { isAgentSession } from "@/lib/server/session";
 import { scopeFor } from "@/lib/server/access";
 import { KvAbort } from "@/lib/server/kv";
 import { getFactoryProfile } from "@/lib/server/accounts-repo";
-import { listDocuments, MAX_DOCUMENTS } from "@/lib/server/documents-repo";
+import { listDocuments } from "@/lib/server/documents-repo";
 import { listAgentTokens } from "@/lib/server/agent-tokens";
 import { changePlan, createPayment, getSubscription, paymentsFor, setCancelAtPeriodEnd } from "@/lib/server/billing";
 import { createSession, gatewayStatus } from "@/lib/server/sslcommerz";
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     subscription: { ...sub, status: statusOf(sub), canSend: canSendAnswers(sub), serviceEndsAt: end === null ? null : new Date(end).toISOString() },
     usage: {
       buyers: { used: g.scope.links.filter((l) => isLive(l)).length, limit: plan.limits.buyers },
-      documents: { used: docs.filter((d) => !d.demo).length, limit: Math.min(plan.limits.documents ?? MAX_DOCUMENTS, MAX_DOCUMENTS) },
+      documents: { used: docs.filter((d) => !d.demo).length, limit: plan.limits.documents },
       agentTokens: { used: tokens.length, limit: plan.limits.agentTokens },
     },
     payments,

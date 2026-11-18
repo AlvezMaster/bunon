@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_BYTES) return fail("The file is larger than 4 MB.", 413);
   const docLimit = Math.min(PLANS[(await getSubscription(scope.orgId)).plan].limits.documents ?? MAX_DOCUMENTS, MAX_DOCUMENTS);
   if ((await listDocuments(scope.orgId)).filter((d) => !d.demo).length >= docLimit) {
-    return fail(docLimit < MAX_DOCUMENTS ? `Your plan allows up to ${docLimit} documents. Upgrade to Pro on the Billing page, or delete one first.` : `You can keep up to ${MAX_DOCUMENTS} documents. Delete one first.`, 409);
+    return fail(docLimit < MAX_DOCUMENTS ? `Your plan allows up to ${docLimit} documents. Upgrade to Pro on the Billing page, or delete one first.` : "You have reached the fair-use limit of 1,000 documents. Contact us to raise it.", 409);
   }
 
   const name = file.name || "document";

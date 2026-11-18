@@ -10,8 +10,8 @@ import { t } from "@/lib/i18n";
 
 /** The three things that tell the plans apart; the full list is on /pricing/compare. */
 const KEY_POINTS: Record<PlanId, string[]> = {
-  starter: ["1 month free", "Up to 3 buyers", "Up to 20 documents"],
-  pro: ["Unlimited buyers", "Up to 50 documents", "Your own AI agents (MCP)"],
+  starter: ["1 month free", "Up to 3 buyers", "Up to 50 documents"],
+  pro: ["Unlimited buyers", "Unlimited documents", "Your own AI agents (MCP)"],
   enterprise: ["Priced for your needs", "AI on your own computers", "Training for your team"],
 };
 

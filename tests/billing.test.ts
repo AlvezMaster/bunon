@@ -68,3 +68,12 @@ test("a payment is settled once, even if SSLCommerz reports it twice", async () 
   assert.equal((await getSubscription("org-twice")).paidUntil, once, "paid time was not added twice");
   assert.equal(statusOf(await getSubscription("org-twice")), "active");
 });
+
+test("document limits: Starter 50, Pro and Enterprise unlimited (fair use applies)", async () => {
+  const { PLANS } = await import("../src/lib/plans.ts");
+  const { MAX_DOCUMENTS } = await import("../src/lib/server/documents-repo.ts");
+  assert.equal(PLANS.starter.limits.documents, 50);
+  assert.equal(PLANS.pro.limits.documents, null);
+  assert.equal(PLANS.enterprise.limits.documents, null);
+  assert.ok(MAX_DOCUMENTS >= 1000, "the fair-use ceiling stays well above Starter's limit");
+});
