@@ -19,5 +19,5 @@ export async function GET(req: NextRequest) {
   const scope = await scopeFor(guard.session);
   const doc = (await listDocuments(scope.orgId)).find((d) => d.id === req.nextUrl.searchParams.get("id"));
   if (!doc?.stored) return NextResponse.json({ error: "No original file is kept for this document." }, { status: 404 });
-  return NextResponse.redirect(originalLink(doc.stored), 302);
+  return NextResponse.redirect(await originalLink(doc.stored), 302);
 }
