@@ -612,6 +612,11 @@ const BN: Record<string, string> = {
   "The test checkout is off.": "টেস্ট চেকআউট বন্ধ আছে।",
   "No such payment.": "এমন কোনো পেমেন্ট নেই।",
   "Choose how to pay.": "কীভাবে পেমেন্ট করবেন বেছে নিন।",
+  "Open AI model (Qwen) on your own computers: documents never leave the factory": "নিজের কম্পিউটারে ওপেন এআই মডেল (Qwen): নথি কারখানার বাইরে যায় না",
+  "Open models, on your own computer": "ওপেন মডেল, নিজের কম্পিউটারে",
+  "Bunon's AI can run as an open model (Qwen) on the factory's own computer, so its documents never leave the factory.": "বুননের এআই কারখানার নিজের কম্পিউটারে ওপেন মডেল (Qwen) হিসেবে চলতে পারে, তাই নথি কারখানার বাইরে যায় না।",
+  "Open model (Qwen) on your own computers": "নিজের কম্পিউটারে ওপেন মডেল (Qwen)",
+  "Open AI model (Qwen) on your own computers": "নিজের কম্পিউটারে ওপেন এআই মডেল (Qwen)",
   // Sign-in and sign-up
   "weaving": "বয়ন",
   "Question from your buyer": "ক্রেতার প্রশ্ন",

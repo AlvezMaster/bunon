@@ -2,7 +2,7 @@
 
 import type React from "react";
 import Link from "next/link";
-import { ArrowRight, Building2, Check, CircleSlash, FolderLock, Quote, ShoppingBag, UserCheck } from "lucide-react";
+import { ArrowRight, Building2, Check, CircleSlash, Cpu, FolderLock, Quote, ShoppingBag, UserCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { t } from "@/lib/i18n";
 
@@ -31,6 +31,7 @@ const AUDIENCES = [
 ];
 
 const BELIEFS = [
+  { Icon: Cpu, title: "Open models, on your own computer", text: "Bunon's AI can run as an open model (Qwen) on the factory's own computer, so its documents never leave the factory." },
   { Icon: Quote, title: "Every answer has a source", text: "An answer quotes the sentence in the factory's own document that it rests on. No source, no answer." },
   { Icon: UserCheck, title: "A person approves", text: "AI drafts. A person at the factory checks every answer before a buyer sees it." },
   { Icon: FolderLock, title: "Factories own their data", text: "Either side can unlink at any time, with a 12-hour undo and 30 days to download the shared data." },
@@ -100,7 +101,7 @@ export default function AboutPage() {
           <h2 id="beliefs-title" className={H2}>
             {t("What we stand for")}
           </h2>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {BELIEFS.map(({ Icon, title, text }) => (
               <div key={title} className="rounded-2xl border border-line bg-surface p-7">
                 <Icon className="h-7 w-7 text-brand" aria-hidden="true" />

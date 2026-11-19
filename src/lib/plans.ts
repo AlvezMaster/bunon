@@ -44,7 +44,7 @@ export const PLANS: Record<PlanId, Plan> = {
     trialDays: 0,
     tagline: "For groups and large factories",
     limits: { buyers: null, documents: null, agentTokens: 5 },
-    features: ["Everything in Pro", "Price based on your needs", "AI that runs on your own computers", "Onboarding and training for your team", "Agreed support terms"],
+    features: ["Everything in Pro", "Price based on your needs", "Open AI model (Qwen) on your own computers: documents never leave the factory", "Onboarding and training for your team", "Agreed support terms"],
   },
 };
 

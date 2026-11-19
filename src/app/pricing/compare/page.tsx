@@ -24,7 +24,7 @@ const ROWS: Array<{ label: string; cells: [Cell, Cell, Cell] }> = [
   { label: "Bangla and English", cells: [true, true, true] },
   { label: "Tamper-evident activity log", cells: [true, true, true] },
   { label: "Your own AI agents (MCP)", cells: [false, true, true] },
-  { label: "AI on your own computers", cells: [false, false, true] },
+  { label: "Open AI model (Qwen) on your own computers", cells: [false, false, true] },
   { label: "Training for your team", cells: [false, false, true] },
   { label: "Support", cells: ["Email", "Priority", "Agreed terms"] },
 ];

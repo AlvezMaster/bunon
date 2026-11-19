@@ -50,14 +50,14 @@ Buyer's question ─────────────────────
                                                                      ▼
                        a person approves, edits or writes ──▶ sent to the buyer ──▶ SHA-256 hash-chained ledger
 ```
-- **Models:** Claude Sonnet 5.5 (Anthropic) drafts answers and reads photos by default when an Anthropic key is set; Qwen stays available, as Qwen 3.5 4B through Ollama on the factory's own computer or Qwen on Cloudflare Workers AI. Qwen3-Embedding 0.6B for meaning search; a small Naive Bayes decision model. Personal details are masked before any cloud call.
+- **Models, open first:** Qwen 3.5 4B, an open model, runs through Ollama on the factory's own computer, so documents never leave the factory; Qwen3-Embedding 0.6B (open) for meaning search; a small Naive Bayes decision model. The hosted website drafts and reads photos with Claude Sonnet 5.5 (Anthropic) when a key is set, or with Qwen on Cloudflare Workers AI (`AI_DRAFTER=qwen`). Personal details are masked before any cloud call.
 - **Multimodal:** a factory can upload a photo or scan of a document (JPG, PNG). The same Qwen model reads its text (vision), copying it exactly; the document is marked "read from a photo" so a person checks it. On the factory's own computer the photo never leaves it.
 - **Agents:** a factory can connect its own AI agent through an MCP connector (`/api/mcp/factory`): 10 tools scoped to that factory; it can prepare answers but only a person can send them.
 - **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 76 automated tests.
 
 ### Data and sovereignty strategy
 - **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
-- **Where AI runs:** on the factory's own computer (nothing leaves the factory) or, on the website, in the cloud with **personal data masked first**: names, phone numbers, emails and ID numbers become placeholders and are restored only on Bunon's server.
+- **Where AI runs:** our answer is open models. A factory can run **Qwen, an open model, on its own computer: nothing leaves the factory**. On the hosted website the AI runs in the cloud (Claude, or Qwen on Cloudflare) with **personal data masked first**: names, phone numbers, emails and ID numbers become placeholders and are restored only on Bunon's server.
 - **What the record keeps:** the ledger stores company ids and fingerprints, never answer text, so shared answers can be deleted while the proof remains.
 - **Leaving:** either side can unlink (12-hour undo); both can download the shared data for 30 days; then shared answers are deleted.
 - **Demo data:** all companies and documents in the demo are fictional and labelled; the certificate registry is a labelled simulation. Public numbers in the video cite their sources (README, VOICEOVER.md).
@@ -66,7 +66,7 @@ Buyer's question ─────────────────────
 ### Demo: a two-minute tour for judges
 1. Sign in as the factory → **Questions** → the Nordlys questionnaire → **Draft all with AI**: drafts with quoted sources; questions the documents can't answer go to a person.
 2. Still in Nordlys, draft and **send question 10** (independent building safety assessment). Then open the **Vela Outfitters** questionnaire: Vela asks the same thing in other words, and it arrives pre-filled from that answer (answer reuse).
-3. **Documents** → "Try a question" in Bangla: কারখানায় কি ১৮ বছরের কম বয়সী কেউ কাজ করে? You can also upload a photo of a document; Qwen reads its text.
+3. **Documents** → "Try a question" in Bangla: কারখানায় কি ১৮ বছরের কম বয়সী কেউ কাজ করে? You can also upload a photo of a document; the AI reads its text (on the website Claude, on a factory's own computer Qwen).
 4. **AI agents**: make a token for your own agent (MCP); its prepared answers wait for a person.
 5. Sign in as the buyer → **Questions** → one questionnaire sent to two factories, answers side by side with sources.
 6. **Pricing** (`/pricing`): plans in taka; factories sign up on a plan and pay through SSLCommerz.

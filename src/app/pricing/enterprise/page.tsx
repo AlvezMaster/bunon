@@ -5,7 +5,7 @@ import { Check, RefreshCw, Send } from "lucide-react";
 import PricingShell from "@/components/pricing/PricingShell";
 import { t } from "@/lib/i18n";
 
-const INCLUDES = ["Everything in Pro", "A price for your factories and needs", "AI that runs on your own computers", "Onboarding and training for your team"];
+const INCLUDES = ["Everything in Pro", "A price for your factories and needs", "Open AI model (Qwen) on your own computers: documents never leave the factory", "Onboarding and training for your team"];
 
 type Form = { company: string; contactName: string; email: string; phone: string; factories: string; needs: string };
 

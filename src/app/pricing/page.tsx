@@ -12,7 +12,7 @@ import { t } from "@/lib/i18n";
 const KEY_POINTS: Record<PlanId, string[]> = {
   starter: ["1 month free", "Up to 3 buyers", "Up to 50 documents"],
   pro: ["Unlimited buyers", "Unlimited documents", "Your own AI agents (MCP)"],
-  enterprise: ["Priced for your needs", "AI on your own computers", "Training for your team"],
+  enterprise: ["Priced for your needs", "Open model (Qwen) on your own computers", "Training for your team"],
 };
 
 /** Pricing, page 1: the three plans and one button each. */
