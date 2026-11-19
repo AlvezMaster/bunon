@@ -53,10 +53,10 @@ Pronunciation: write Bunon as "Boo-non", SLCP as "S. L. C. P.", Qwen as "Kwen" i
 
 | # | Start | Length | Words | Voice clip | Line |
 |---|---|---|---|---|---|
-| 29 | 2:00.0 | 7.7 s | 14 | 6.2 s | Drafts are personal: hybrid search covers only that factory's documents, in English and Bangla. |
-| 30 | 2:07.7 | 8.2 s | 17 | 6.6 s | Qwen, an open AI model, drafts the answer, and it can run on the factory's own computer. |
-| 31 | 2:15.9 | 5.7 s | 16 | 4.5 s | Then the checks: the quote must exist word for word, and a second model must agree. |
-| 32 | 2:21.6 | 8.4 s | 23 | 6.8 s | On our test set, the right document came back in the top four for 16 of 16 questions, with zero wrong answers kept. |
+| 29 | 2:00.0 | 7.8 s | 14 | 6.2 s | Drafts are personal: hybrid search covers only that factory's documents, in English and Bangla. |
+| 30 | 2:07.8 | 7.8 s | 17 | 6.2 s | Qwen, an open-source AI model, drafts the answer, and it can run on the factory's own computer. |
+| 31 | 2:15.6 | 5.8 s | 16 | 4.5 s | Then the checks: the quote must exist word for word, and a second model must agree. |
+| 32 | 2:21.5 | 8.5 s | 23 | 6.8 s | On our test set, the right document came back in the top four for 16 of 16 questions, with zero wrong answers kept. |
 
 ## 5. Impact & next step (2:30.0–3:00.0)
 

@@ -617,6 +617,9 @@ const BN: Record<string, string> = {
   "Bunon's AI can run as an open model (Qwen) on the factory's own computer, so its documents never leave the factory.": "বুননের এআই কারখানার নিজের কম্পিউটারে ওপেন মডেল (Qwen) হিসেবে চলতে পারে, তাই নথি কারখানার বাইরে যায় না।",
   "Open model (Qwen) on your own computers": "নিজের কম্পিউটারে ওপেন মডেল (Qwen)",
   "Open AI model (Qwen) on your own computers": "নিজের কম্পিউটারে ওপেন এআই মডেল (Qwen)",
+  "Open original": "মূল ফাইল খুলুন",
+  "Only a person can open original files.": "শুধু একজন মানুষ মূল ফাইল খুলতে পারেন।",
+  "No original file is kept for this document.": "এই নথির মূল ফাইল রাখা হয়নি।",
   // Sign-in and sign-up
   "weaving": "বয়ন",
   "Question from your buyer": "ক্রেতার প্রশ্ন",

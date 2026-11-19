@@ -263,7 +263,7 @@ export const SEGMENTS: Segment[] = [
           callouts: [{ t: 0.35, x: 900, y: 216, text: "A Bangla question finds the right document", side: "top" }],
         },
       },
-      { text: "Qwen, an open AI model, drafts the answer, and it can run on the factory's own computer.", visual: { kind: "models" } },
+      { text: "Qwen, an open-source AI model, drafts the answer, and it can run on the factory's own computer.", visual: { kind: "models" } },
       { text: "Then the checks: the quote must exist word for word, and a second model must agree.", visual: { kind: "checks" } },
       { text: "On our test set, the right document came back in the top four for 16 of 16 questions, with zero wrong answers kept.", visual: { kind: "results" } },
     ],

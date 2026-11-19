@@ -126,6 +126,32 @@ p {
   color: var(--color-ink);
 }
 
+/* Sign-in and sign-up frame. The picture panel: woven threads (বুনন means weaving) and a warm glow. */
+.auth-visual {
+  background-color: #13263f;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 22px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 22px),
+    radial-gradient(60% 50% at 70% 72%, rgba(194, 65, 12, 0.32), transparent 70%),
+    linear-gradient(160deg, #1e3a5f 0%, #13263f 55%, #0d1b2e 100%);
+}
+/* Dark: a deeper, quieter panel that belongs to the same dark page, with a hairline between the halves. */
+html[data-theme="dark"] .auth-visual {
+  background-color: #0a1222;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(163, 177, 255, 0.035) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(0deg, rgba(163, 177, 255, 0.025) 0 1px, transparent 1px 22px),
+    radial-gradient(55% 45% at 72% 74%, rgba(194, 65, 12, 0.2), transparent 70%),
+    linear-gradient(160deg, #111d33 0%, #0b1528 55%, #070d1a 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+/* Dark: a calm, solid background behind the form instead of the watercolour. */
+html[data-theme="dark"] .auth-form-side {
+  background:
+    radial-gradient(70% 55% at 50% 40%, rgba(52, 70, 168, 0.12), transparent 70%),
+    #0b1020;
+}
+
 /* Home hero: the promise, as big as the screen allows. */
 .hero-giant {
   font-family: var(--font-display);

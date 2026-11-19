@@ -7,6 +7,7 @@
  * The demo factory also has the built-in demo documents (src/lib/fixtures/factory-documents.ts).
  * Embeddings are kept per model; passages without one for the current model are found by keywords.
  */
+import type { StoredFile } from "./file-store.ts";
 import { randomBytes } from "node:crypto";
 import { kvRead, kvReadMany, kvUpdate } from "./kv.ts";
 import { embed, embeddingModel } from "./embeddings.ts";
@@ -31,6 +32,8 @@ export interface DocumentMeta {
   demo?: boolean;
   /** The text was read from a photo or scan by an AI model, so a person should check it. */
   fromPhoto?: boolean;
+  /** The original file, kept privately (see file-store.ts). */
+  stored?: StoredFile;
 }
 
 interface StoredText {
@@ -115,6 +118,7 @@ export interface NewDocument {
   validUntil: string | null;
   uploadedBy: string;
   fromPhoto?: boolean;
+  stored?: StoredFile | null;
 }
 
 /** Splits, embeds (when a model is available) and stores a document. */
@@ -137,6 +141,7 @@ export async function addDocument(d: NewDocument): Promise<DocumentMeta> {
     uploadedAt: new Date().toISOString(),
     uploadedBy: d.uploadedBy,
     ...(d.fromPhoto ? { fromPhoto: true } : {}),
+    ...(d.stored ? { stored: d.stored } : {}),
   };
   await kvUpdate<StoredText>(textKey(id), () => ({ text: "", passages: [] }), () => ({ text: d.text, passages: withVec }));
   await kvUpdate<DocumentMeta[]>(listKey(d.orgId), () => [], (list) => {

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Camera, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
+import { ArrowRight, Camera, ExternalLink, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -20,6 +20,8 @@ interface Doc {
   uploadedAt: string;
   demo?: boolean;
   fromPhoto?: boolean;
+  /** Set when the original file is kept (private; opened through a short-lived link). */
+  stored?: unknown;
 }
 
 const isPhoto = (f: File) => /^image\/(jpeg|png|webp)$/.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
@@ -279,6 +281,17 @@ export default function FactoryDocuments() {
                     </p>
                   </div>
                   {d.embedModel && <span className="w-fit rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">{t("Meaning search")}</span>}
+                  {!!d.stored && (
+                    <a
+                      href={`/api/documents/file?id=${encodeURIComponent(d.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-brand hover:underline"
+                    >
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                      {t("Open original")}
+                    </a>
+                  )}
                   {!d.demo &&
                     (confirming === d.id ? (
                       <span className="flex items-center gap-2">

@@ -59,6 +59,7 @@ Buyer's question ─────────────────────
 - **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
 - **Where AI runs:** our answer is open models. A factory can run **Qwen, an open model, on its own computer: nothing leaves the factory**. On the hosted website the AI runs in the cloud (Claude, or Qwen on Cloudflare) with **personal data masked first**: names, phone numbers, emails and ID numbers become placeholders and are restored only on Bunon's server.
 - **What the record keeps:** the ledger stores company ids and fingerprints, never answer text, so shared answers can be deleted while the proof remains.
+- **Original files:** on the hosted site, each uploaded original is kept as a private file in Cloudinary, named by its fingerprint. There is no public link: only the factory's own people can open it, through a signed link that expires after 5 minutes, and deleting the document deletes the file. On a factory's own computer, nothing is sent out.
 - **Leaving:** either side can unlink (12-hour undo); both can download the shared data for 30 days; then shared answers are deleted.
 - **Demo data:** all companies and documents in the demo are fictional and labelled; the certificate registry is a labelled simulation. Public numbers in the video cite their sources (README, VOICEOVER.md).
 - Designed with GDPR and Bangladesh's personal-data rules in mind; we do not claim certification of compliance.

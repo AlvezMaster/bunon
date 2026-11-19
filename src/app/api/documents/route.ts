@@ -11,6 +11,7 @@ import { findEvidence } from "@/lib/server/questionnaire-ai";
 import { getSubscription } from "@/lib/server/billing";
 import { PLANS } from "@/lib/plans";
 import { VisionUnavailableError, isImage, readImageText } from "@/lib/server/vision";
+import { deleteOriginal, storeOriginal } from "@/lib/server/file-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +59,10 @@ export async function POST(req: NextRequest) {
     // Search is read-only and open to the factory's AI agent; deleting and uploading stay with a person.
     if (isAgentSession(guard.session)) return fail("Only a person can do this in Bunon.", 403);
     if (body?.action !== "delete" || typeof body.id !== "string") return fail("Unknown action.");
-    return (await deleteDocument(scope.orgId, body.id)) ? NextResponse.json({ ok: true }) : fail("That document can't be deleted.", 404);
+    const doomed = (await listDocuments(scope.orgId)).find((d) => d.id === body.id);
+    if (!(await deleteDocument(scope.orgId, body.id))) return fail("That document can't be deleted.", 404);
+    if (doomed?.stored) await deleteOriginal(doomed.stored);
+    return NextResponse.json({ ok: true });
   }
 
   if (isAgentSession(guard.session)) return fail("Only a person can do this in Bunon.", 403);
@@ -96,7 +100,8 @@ export async function POST(req: NextRequest) {
   const validUntil = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
   const sha256 = await sha256Hex(bytes);
 
-  const meta = await addDocument({ orgId: scope.orgId, title, fileName: name, text, sha256, bytes: file.size, validUntil, uploadedBy: guard.session.name, fromPhoto: photo });
+  const stored = await storeOriginal(scope.orgId, sha256, name, bytes, photo);
+  const meta = await addDocument({ orgId: scope.orgId, title, fileName: name, text, sha256, bytes: file.size, validUntil, uploadedBy: guard.session.name, fromPhoto: photo, stored });
 
   // The ledger records that this exact file was added (its fingerprint), not its content.
   const { block } = await appendLedgerBlock({

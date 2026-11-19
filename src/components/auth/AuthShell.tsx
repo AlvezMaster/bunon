@@ -24,14 +24,7 @@ export default function AuthShell({
 }) {
   return (
     <div className="flex min-h-screen bg-canvas text-ink">
-      <aside
-        aria-hidden="true"
-        className="relative hidden w-[44%] max-w-[640px] flex-col justify-between overflow-hidden bg-[#13263F] p-12 text-white lg:flex"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 22px), repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 22px), radial-gradient(60% 50% at 70% 72%, rgba(194,65,12,0.32), transparent 70%), linear-gradient(160deg, #1E3A5F 0%, #13263F 55%, #0D1B2E 100%)",
-        }}
-      >
+      <aside aria-hidden="true" className="auth-visual relative hidden w-[44%] max-w-[640px] flex-col justify-between overflow-hidden p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
           <BunonLogo className="h-10 w-10 [&_path]:fill-white" />
           <span className="font-display text-3xl font-semibold tracking-tight">Bunon</span>
@@ -59,7 +52,7 @@ export default function AuthShell({
         <p className="text-sm text-white/45">বুনন · {t("weaving")}</p>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="auth-form-side flex min-h-screen flex-1 flex-col">
         <div className="flex items-center justify-between px-4 pt-4 sm:px-8">
           <Link href="/" className="flex min-h-[44px] items-center gap-2 rounded-full px-3 text-sm font-medium text-ink-muted transition-colors hover:text-ink">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
