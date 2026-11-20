@@ -169,10 +169,11 @@ export function fuse(rankings: Array<Array<{ id: string }>>, k = 60): Map<string
 }
 
 /** Keyword + meaning search, fused, top `k` passages. Works keyword-only when there are no vectors. */
-export function hybridSearch(question: string, passages: Passage[], queryVec: Int8Array | null, k = 4): RankedPassage[] {
+export function hybridSearch(question: string, passages: Passage[], queryVec: Int8Array | null, k = 4, meaning?: Array<{ id: string; score: number }> | null): RankedPassage[] {
   // A Bangla question also searches with English words for its compliance terms (documents are mostly English).
   const byKeyword = keywordRank(withEnglishTerms(question), passages).slice(0, 20);
-  const byMeaning = queryVec ? meaningRank(queryVec, passages).slice(0, 20) : [];
+  // Meaning search: from the vector database when it answered, else in the app.
+  const byMeaning = meaning ? meaning.slice(0, 20) : queryVec ? meaningRank(queryVec, passages).slice(0, 20) : [];
   const fused = fuse([byKeyword, byMeaning]);
   const kw = new Set(byKeyword.map((r) => r.id));
   const mn = new Set(byMeaning.map((r) => r.id));

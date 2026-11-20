@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
     if (body?.action === "search") {
       const text = typeof body.text === "string" ? body.text.trim().slice(0, 300) : "";
       if (text.length < 4) return fail("Type a question.");
-      const { corpus, evidence, meaning } = await findEvidence(scope.orgId, text);
+      const { corpus, evidence, meaning, vectorStore } = await findEvidence(scope.orgId, text);
       const title = (id: string) => corpus.docs.find((d) => d.id === id)?.title ?? id;
-      return NextResponse.json({ meaning, passages: evidence.map((p) => ({ docId: p.docId, title: title(p.docId), text: p.text, via: p.via })) });
+      return NextResponse.json({ meaning, vectorStore, passages: evidence.map((p) => ({ docId: p.docId, title: title(p.docId), text: p.text, via: p.via })) });
     }
     // Search is read-only and open to the factory's AI agent; deleting and uploading stay with a person.
     if (isAgentSession(guard.session)) return fail("Only a person can do this in Bunon.", 403);

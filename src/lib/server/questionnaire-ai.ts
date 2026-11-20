@@ -6,6 +6,7 @@
  * with a quote and a source → finalizeDraft() keeps it only if the quote exists word for word in the
  * cited document and both models agree the question is answerable. Without Ollama, rules take over.
  */
+import { vectorSearch } from "./vector-store.ts";
 import {
   decideCategory,
   finalizeDraft,
@@ -61,7 +62,9 @@ export async function findEvidence(orgId: string, questionText: string) {
   const corpus = await loadCorpus(orgId);
   const q = corpus.model && corpus.passages.some((p) => p.vec) ? await embed("queries", [questionText]) : null;
   const queryVec = q && q.model === corpus.model ? dequantize(quantize(q.vectors[0])) : null;
-  return { corpus, evidence: hybridSearch(questionText, corpus.passages, queryVec), meaning: !!queryVec };
+  // Meaning search in the vector database (pgvector on Supabase) when configured; it falls back to the app on any error.
+  const fromDb = queryVec && corpus.model ? await vectorSearch(orgId, corpus.model, q!.vectors[0], corpus.passages) : null;
+  return { corpus, evidence: hybridSearch(questionText, corpus.passages, queryVec, 4, fromDb), meaning: !!queryVec, vectorStore: fromDb ? "supabase-pgvector" : queryVec ? "in-app" : null };
 }
 
 export async function draftAnswer(question: Pick<BuyerQuestion, "id" | "text">, orgId: string): Promise<QuestionDraft> {

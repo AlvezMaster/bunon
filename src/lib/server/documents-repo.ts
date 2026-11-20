@@ -14,6 +14,7 @@ import { embed, embeddingModel } from "./embeddings.ts";
 import { FIXTURE_DOCS_ORG } from "./accounts-repo.ts";
 import { FACTORY_DOCUMENTS, type FactoryDocument } from "../fixtures/factory-documents.ts";
 import { chunkText, embedText, quantize, type Passage } from "../rag.ts";
+import { deleteVectors } from "./vector-store.ts";
 
 export interface DocumentMeta {
   id: string;
@@ -158,5 +159,6 @@ export async function deleteDocument(orgId: string, docId: string): Promise<bool
     return list.filter((m) => m.id !== docId);
   });
   if (found) await kvUpdate<StoredText>(textKey(docId), () => ({ text: "", passages: [] }), () => ({ text: "", passages: [] }));
+  if (found) await deleteVectors(docId);
   return found;
 }
