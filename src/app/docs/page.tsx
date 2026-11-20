@@ -200,9 +200,9 @@ export default function DocsPage() {
 
           <Section id="fit" title="Built for ComplianceOS" lead="JusticeSphere AI asks for systems that turn dense legal and regulatory complexity into actionable, auditable intelligence. Here is each part of the ComplianceOS brief, and what in Bunon answers it.">
             <div className="glass-card overflow-x-auto">
-              <table className="w-full min-w-[680px] text-left text-sm">
+              <table className="w-full text-left text-sm md:min-w-[680px]">
                 <caption className="sr-only">ComplianceOS brief mapped to Bunon</caption>
-                <thead className="text-xs uppercase tracking-[0.06em] text-ink-faint">
+                <thead className="hidden text-xs uppercase tracking-[0.06em] text-ink-faint md:table-header-group">
                   <tr className="border-b border-line"><th scope="col" className="px-4 py-3">The brief asks for</th><th scope="col" className="px-4 py-3">Bunon</th><th scope="col" className="px-4 py-3">Status</th></tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -216,10 +216,10 @@ export default function DocsPage() {
                     ["Documents and digital workflows together, beyond static checklists", "Buyer questionnaires, answer reuse, the evidence map and the document library work on the same documents.", "Built", true],
                     ["Synthetic edge cases to stress-test automated auditing", "Labelled synthetic rule changes, including look-alike numbers, test the action plan.", "Built", true],
                   ].map(([ask, bunon, status, done]) => (
-                    <tr key={String(ask)}>
-                      <th scope="row" className="px-4 py-3 align-top font-medium text-ink">{ask}</th>
-                      <td className="px-4 py-3 align-top text-ink-muted">{bunon}</td>
-                      <td className="px-4 py-3 align-top">
+                    <tr key={String(ask)} className="flex flex-col gap-1.5 py-3 md:table-row md:py-0">
+                      <th scope="row" className="block px-4 align-top font-medium text-ink md:table-cell md:py-3">{ask}</th>
+                      <td className="block px-4 align-top text-ink-muted md:table-cell md:py-3">{bunon}</td>
+                      <td className="block px-4 align-top md:table-cell md:py-3">
                         <span className={`inline-flex items-start gap-1.5 text-xs font-medium ${done ? "text-success" : "text-brand"}`}>
                           <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           {status}
@@ -372,7 +372,7 @@ export default function DocsPage() {
               ))}
             </div>
             <div className="glass-card overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
+              <table className="w-full text-left text-sm md:min-w-[560px]">
                 <caption className="sr-only">Main HTTP endpoints</caption>
                 <thead className="text-xs uppercase tracking-[0.06em] text-ink-faint"><tr className="border-b border-line"><th scope="col" className="px-4 py-3">Endpoint</th><th scope="col" className="px-4 py-3">What it does</th></tr></thead>
                 <tbody className="divide-y divide-line">
@@ -384,7 +384,7 @@ export default function DocsPage() {
                     ["GET /api/action-plan", "Watched rules and the factory's reviewed versions and approved fixes"],
                     ["GET /api/audit-ledger", "The tamper-evident activity log, with hash-chain verification"],
                     ["GET /api/docs/stats", "The live numbers on this page (aggregate counts only)"],
-                  ].map(([e, d]) => <tr key={e}><td className="px-4 py-2.5"><code className="text-xs text-ink">{e}</code></td><td className="px-4 py-2.5 text-ink-muted">{d}</td></tr>)}
+                  ].map(([e, d]) => <tr key={e}><td className="px-4 py-2.5 align-top"><code className="break-words text-xs text-ink">{e}</code></td><td className="px-4 py-2.5 text-ink-muted">{d}</td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -407,7 +407,7 @@ export default function DocsPage() {
 
           <Section id="results" n={8} title="Measured results" lead="Our own tests on small labelled sets and synthetic documents. Real factory pilots are the next step.">
             <div className="glass-card overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
+              <table className="w-full text-left text-sm md:min-w-[560px]">
                 <caption className="sr-only">Measured results</caption>
                 <thead className="text-xs uppercase tracking-[0.06em] text-ink-faint"><tr className="border-b border-line"><th scope="col" className="px-4 py-3">Test</th><th scope="col" className="px-4 py-3">Result</th></tr></thead>
                 <tbody className="divide-y divide-line [font-variant-numeric:tabular-nums]">

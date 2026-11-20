@@ -138,7 +138,7 @@ export default function HomePage() {
               <div key={s.text} className="scroll-reveal space-y-2" style={{ "--i": i } as React.CSSProperties}>
                 <CountUp to={s.to} decimals={s.decimals} suffix={s.suffix} className="font-display text-6xl font-semibold tracking-[-0.03em] text-ink" />
                 <p className="max-w-[26ch] text-[15px] text-ink-muted">{t(s.text)}</p>
-                <a href={s.href} className="inline-block font-mono text-xs text-ink-faint underline-offset-4 hover:text-ink hover:underline">
+                <a href={s.href} className="inline-flex min-h-6 items-center font-mono text-xs text-ink-faint underline-offset-4 hover:text-ink hover:underline">
                   {s.source}
                 </a>
               </div>

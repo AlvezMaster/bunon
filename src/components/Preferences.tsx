@@ -48,7 +48,7 @@ export function PreferenceToggles() {
       <button
         type="button"
         onClick={() => setLang(lang === "en" ? "bn" : "en")}
-        className={`${ghost} px-2.5 py-1 text-[12px] font-medium text-ink-muted hover:text-ink`}
+        className={`${ghost} min-h-11 px-3 py-1 text-[13px] font-medium text-ink-muted hover:text-ink md:min-h-0 md:px-2.5 md:text-[12px]`}
         aria-label={lang === "en" ? "বাংলায় দেখুন (switch to Bangla)" : "Switch to English (ইংরেজিতে দেখুন)"}
       >
         <span className={lang === "en" ? "font-bengali" : ""}>{lang === "en" ? "বাংলা" : "English"}</span>
@@ -56,7 +56,7 @@ export function PreferenceToggles() {
       <button
         type="button"
         onClick={toggleTheme}
-        className={`${ghost} flex h-8 w-8 items-center justify-center text-ink-muted hover:text-ink`}
+        className={`${ghost} flex h-11 w-11 items-center justify-center text-ink-muted hover:text-ink md:h-8 md:w-8`}
         aria-label={t(dark ? "Light mode" : "Dark mode")}
         aria-pressed={dark}
       >

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { ChevronDown, LogIn, LogOut, CreditCard, UserRound } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, CreditCard, Menu, UserRound, X } from "lucide-react";
 import { useBunonStore, type UserRole } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { PreferenceToggles } from "@/components/Preferences";
@@ -63,6 +63,26 @@ export default function Navbar() {
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Phones: the navigation lives in a full-width sheet behind a Menu button instead of a squeezed strip.
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navOpen]);
 
   // Public pages: hide the bar while the visitor scrolls down, bring it back on scroll up,
   // on hover at the top edge, or when a link inside it gets keyboard focus.
@@ -88,7 +108,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [autoHide]);
 
-  const hidden = autoHide && scrolledAway && !pinned;
+  const hidden = autoHide && scrolledAway && !pinned && !navOpen;
 
   const links = session ? workspaceLinks(session.role) : PUBLIC_LINKS;
 
@@ -153,7 +173,7 @@ export default function Navbar() {
           <div className="flex min-w-0 items-center">
             <Link
               href={session ? (session.role === "buyer" ? "/buyer" : "/factory") : "/"}
-              className="flex shrink-0 items-center gap-2.5 rounded-md"
+              className="-ml-2 flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2.5 rounded-md px-2"
               aria-label="Bunon home"
             >
               <BunonLogo className="h-7 w-7" />
@@ -162,7 +182,7 @@ export default function Navbar() {
 
             <span className={`mx-4 hidden rotate-[15deg] sm:block ${HAIRLINE.replace("h-3.5", "h-4")}`} aria-hidden="true" />
 
-            <nav aria-label="Main" className={`min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${session ? "flex" : "hidden sm:flex"}`}>
+            <nav aria-label="Main" className="hidden min-w-0 overflow-x-auto [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
               <div className="flex items-center gap-1">
                 {links.map((link) => {
                   const active = isActive(link);
@@ -187,10 +207,21 @@ export default function Navbar() {
 
           {/* Right: flat utilities and the account */}
           <div className="flex shrink-0 items-center">
-            <div className={`items-center ${session ? "hidden sm:flex" : "flex"}`}>
+            <div className="hidden items-center md:flex">
               <PreferenceToggles />
               <span className={`mx-1.5 ${HAIRLINE}`} aria-hidden="true" />
             </div>
+
+            <button
+              type="button"
+              onClick={() => setNavOpen((o) => !o)}
+              aria-expanded={navOpen}
+              aria-controls="phone-nav"
+              aria-label={t(navOpen ? "Close menu" : "Open menu")}
+              className={`mr-1 grid h-11 w-11 place-items-center text-ink md:hidden ${GHOST}`}
+            >
+              {navOpen ? <X className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" /> : <Menu className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />}
+            </button>
 
             {session && user ? (
               <div className="relative" ref={menuRef}>
@@ -199,7 +230,8 @@ export default function Navbar() {
                   onClick={() => setMenuOpen((o) => !o)}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  className={`flex items-center gap-2.5 py-1 pl-2 pr-2.5 ${GHOST}`}
+                  aria-label={t("Account menu")}
+                  className={`flex min-h-11 items-center gap-2.5 py-1 pl-2 pr-2.5 md:min-h-0 ${GHOST}`}
                 >
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface-2 text-[10px] font-medium tracking-wider text-ink">
                     {user.initials}
@@ -276,7 +308,7 @@ export default function Navbar() {
                 href="/login"
                 label={t("Sign in")}
                 aria-current={pathname === "/login" ? "page" : undefined}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-ink ${GHOST}`}
+                className={`flex min-h-11 items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-ink md:min-h-0 ${GHOST}`}
               >
                 <LogIn className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                 {t("Sign in")}
@@ -285,6 +317,51 @@ export default function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* Phones: every link in one full-width sheet, large enough to tap */}
+      <AnimatePresence>
+        {navOpen && (
+          <motion.div
+            id="phone-nav"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-x-0 bottom-0 top-14 z-40 overflow-y-auto border-t border-ink/[0.08] bg-canvas/97 backdrop-blur-md md:hidden"
+          >
+            <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-col px-4 pb-10 pt-3">
+              <ul className="flex flex-col">
+                {links.map((link) => {
+                  const active = isActive(link);
+                  return (
+                    <li key={link.label} className="border-b border-ink/[0.06]">
+                      <Link
+                        href={link.href}
+                        onClick={() => setNavOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={`flex min-h-14 items-center justify-between rounded-md px-2 text-[17px] transition-colors duration-150 ${active ? "font-semibold text-ink" : "text-ink-muted hover:text-ink"}`}
+                      >
+                        {t(link.label)}
+                        {active && <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              {!session && (
+                <Link href="/login" onClick={() => setNavOpen(false)} className="btn-primary-action mt-6 min-h-[48px] justify-center">
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  {t("Sign in")}
+                </Link>
+              )}
+              <div className="mt-6 flex items-center justify-between rounded-lg border border-ink/[0.08] px-2 py-1">
+                <span className="px-2 text-sm text-ink-muted">{t("Language and theme")}</span>
+                <PreferenceToggles />
+              </div>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </MotionConfig>
   );
 }

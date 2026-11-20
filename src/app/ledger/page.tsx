@@ -246,7 +246,7 @@ export default function AuditLogsPage() {
                           <button
                             type="button"
                             onClick={() => void handleCopy(b.hash)}
-                            className="min-h-[32px] text-ink hover:text-brand flex items-center gap-1.5"
+                            className="min-h-11 text-ink hover:text-brand flex items-center gap-1.5 md:min-h-[32px]"
                             aria-label={`Copy hash of block ${b.block}`}
                           >
                             <span>{shortHash(b.hash)}</span>

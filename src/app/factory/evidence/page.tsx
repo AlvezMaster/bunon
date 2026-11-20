@@ -123,7 +123,39 @@ function EvidenceMap({ data }: { data: Payload }) {
       </ul>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <figure className="glass-card overflow-x-auto p-4">
+        {/* Phones: the graph is too wide to read, so the documents are a list; the details panel below shows the links. */}
+        <section aria-label={t("Documents")} className="glass-card flex flex-col p-2 md:hidden">
+          <p className="px-2 pb-1 pt-2 text-xs text-ink-muted">{t("Tap a document to see the answers and buyers that rest on it.")}</p>
+          <ul className="flex flex-col divide-y divide-line">
+            {impact.map((d) => {
+              const warn = d.answers.length > 0 && d.daysLeft !== null && d.daysLeft <= SOON;
+              const on = selected === d.id;
+              return (
+                <li key={d.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setSelected(on ? null : d.id)}
+                    className={`flex min-h-14 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left ${on ? "bg-brand-soft" : ""}`}
+                  >
+                    <span className="flex min-w-0 items-start gap-2">
+                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-ink">{d.title}</span>
+                        <span className="block text-xs text-ink-muted [font-variant-numeric:tabular-nums]">
+                          {d.answers.length} {t(d.answers.length === 1 ? "answer" : "answers")} · {d.buyers.length} {t(d.buyers.length === 1 ? "buyer" : "buyers")}
+                        </span>
+                      </span>
+                    </span>
+                    {warn && <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-label={t(`expires within ${SOON} days`)} />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <figure className="glass-card hidden overflow-x-auto p-4 md:block">
           <figcaption className="mb-3 grid min-w-[720px] grid-cols-[240fr_100fr_300fr_100fr_220fr] text-xs font-semibold uppercase tracking-[0.06em] text-ink-faint">
             <span>{t("Documents")}</span><span /><span>{t("Answers sent")}</span><span /><span>{t("Buyers")}</span>
           </figcaption>

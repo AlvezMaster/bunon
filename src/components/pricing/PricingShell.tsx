@@ -25,7 +25,7 @@ export default function PricingShell({ title, note, children }: { title: string;
           <h1 className="max-w-[22ch] font-display text-[clamp(2.25rem,4vw+1rem,3.5rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-ink [text-wrap:balance]">{t(title)}</h1>
           <p className="max-w-[60ch] text-base text-ink-muted [text-wrap:pretty]">{t(note)}</p>
         </header>
-        <nav aria-label={t("Pricing pages")} className="-mt-2 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface-2/70 p-1 [scrollbar-width:none]">
+        <nav aria-label={t("Pricing pages")} className="-mt-2 flex w-full max-w-full gap-0.5 overflow-x-auto rounded-full border border-line bg-surface-2/70 p-1 [scrollbar-width:none] sm:w-fit">
           {TABS.map((tab) => {
             const active = path === tab.href;
             return (
@@ -33,7 +33,7 @@ export default function PricingShell({ title, note, children }: { title: string;
                 key={tab.href}
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-[44px] shrink-0 items-center rounded-full px-5 text-sm font-medium transition-colors duration-150 ${
+                className={`inline-flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-full px-2 text-[13px] font-medium sm:text-sm transition-colors duration-150 sm:flex-none sm:shrink-0 sm:px-5 ${
                   active ? "bg-[var(--color-ink)] text-canvas" : "text-ink-muted hover:text-ink"
                 }`}
               >

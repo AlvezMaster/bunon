@@ -43,11 +43,11 @@ export default function PricingComparePage() {
   return (
     <PricingShell title="Compare the plans" note="Everything in one table. Every feature here works in Bunon today.">
       <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] border-collapse text-left text-[15px]">
+        <table className="w-full min-w-[520px] border-collapse text-left text-[14px] sm:min-w-[640px] sm:text-[15px]">
           <caption className="sr-only">{t("Plans compared feature by feature")}</caption>
           <thead>
             <tr className="border-b border-line">
-              <th scope="col" className="w-[34%] px-5 py-4 text-sm font-medium text-ink-muted">
+              <th scope="col" className="sticky left-0 z-10 w-[34%] bg-surface px-3 py-4 text-sm font-medium text-ink-muted sm:static sm:px-5">
                 {t("Feature")}
               </th>
               {IDS.map((id) => (
@@ -60,7 +60,7 @@ export default function PricingComparePage() {
           <tbody className="divide-y divide-line">
             {ROWS.map((r) => (
               <tr key={r.label}>
-                <th scope="row" className="px-5 py-3.5 font-medium text-ink">
+                <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-3.5 font-medium text-ink shadow-[1px_0_0_var(--color-line)] sm:static sm:px-5 sm:shadow-none">
                   {t(r.label)}
                 </th>
                 {r.cells.map((c, i) => (
