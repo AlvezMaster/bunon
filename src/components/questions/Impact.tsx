@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Quote, Repeat2, Send, Timer } from "lucide-react";
+import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Payload } from "./shared";
 import { t } from "@/lib/i18n";
 
@@ -63,7 +64,7 @@ function weekOf(iso: string): string {
 
 /**
  * Answers sent per week for the last 8 weeks with answers, split into new answers and answers reused
- * from an earlier buyer. Drawn as plain SVG bars; the same numbers are in a table for screen readers.
+ * from an earlier buyer. Drawn with Recharts; the same numbers are in a table for screen readers.
  */
 export function WeeklyChart({ answers }: { answers: Array<{ approvedAt?: string; reusedFrom?: string | null }> }) {
   const dated = answers.filter((a) => a.approvedAt && Number.isFinite(Date.parse(a.approvedAt)));
@@ -82,12 +83,9 @@ export function WeeklyChart({ answers }: { answers: Array<{ approvedAt?: string;
     const reused = inWeek.filter((a) => a.reusedFrom).length;
     return { week: w, fresh: inWeek.length - reused, reused };
   });
-  const top = Math.max(1, ...rows.map((r) => r.fresh + r.reused));
-  const W = 640, H = 150, padB = 24, padT = 18, gap = 24;
-  const slot = W / rows.length;
-  const bw = Math.min(64, slot - gap);
-  const y = (n: number) => ((H - padB - padT) * n) / top;
   const label = (w: string) => new Date(w).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  // The total sits on top of whichever bar is highest in the stack.
+  const chartRows = rows.map((r) => ({ ...r, label: label(r.week), onFresh: r.reused ? null : r.fresh || null, onReused: r.reused ? r.fresh + r.reused : null }));
 
   return (
     <figure className="glass-card p-4">
@@ -98,33 +96,31 @@ export function WeeklyChart({ answers }: { answers: Array<{ approvedAt?: string;
           <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-success [background-image:repeating-linear-gradient(45deg,transparent_0_2px,rgba(255,255,255,.45)_2px_4px)]" aria-hidden="true" />{t("Reused for another buyer")}</span>
         </span>
       </figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={t("Answers sent each week")}>
-        <defs>
-          <pattern id="reuse-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect width="6" height="6" className="fill-success" />
-            <rect width="2" height="6" fill="rgba(255,255,255,.4)" />
-          </pattern>
-        </defs>
-        <line x1="0" x2={W} y1={H - padB} y2={H - padB} className="stroke-line" strokeWidth="1" />
-        {rows.map((r, i) => {
-          const x = i * slot + (slot - bw) / 2;
-          const hf = y(r.fresh);
-          const hr = y(r.reused);
-          return (
-            <g key={r.week}>
-              <title>{`${label(r.week)}: ${r.fresh} new, ${r.reused} reused`}</title>
-              {r.fresh > 0 && <rect x={x} y={H - padB - hf} width={bw} height={hf} rx="3" className="fill-brand" />}
-              {r.reused > 0 && <rect x={x} y={H - padB - hf - hr - (r.fresh ? 2 : 0)} width={bw} height={hr} rx="3" fill="url(#reuse-hatch)" />}
-              {r.fresh + r.reused > 0 && (
-                <text x={x + bw / 2} y={H - padB - hf - hr - 6} textAnchor="middle" className="fill-ink-muted text-[11px] [font-variant-numeric:tabular-nums]">
-                  {r.fresh + r.reused}
-                </text>
-              )}
-              <text x={x + bw / 2} y={H - 6} textAnchor="middle" className="fill-ink-faint text-[11px]">{label(r.week)}</text>
-            </g>
-          );
-        })}
-      </svg>
+      <div role="img" aria-label={t("Answers sent each week")} className="h-44 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartRows} margin={{ top: 18, right: 8, bottom: 0, left: 8 }} barCategoryGap="28%">
+            <defs>
+              <pattern id="reuse-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="6" height="6" className="fill-success" />
+                <rect width="2" height="6" fill="rgba(255,255,255,.4)" />
+              </pattern>
+            </defs>
+            <XAxis dataKey="label" tickLine={false} axisLine={{ className: "stroke-line" }} tick={{ className: "fill-ink-faint text-[11px]" }} />
+            <YAxis hide allowDecimals={false} />
+            <Tooltip
+              cursor={{ fillOpacity: 0.06 }}
+              contentStyle={{ background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 8, fontSize: 12, color: "var(--color-ink)" }}
+              formatter={(value, name) => [value, name === "fresh" ? t("New answer") : t("Reused for another buyer")]}
+            />
+            <Bar dataKey="fresh" stackId="week" maxBarSize={64} className="[&_.recharts-rectangle]:fill-brand" isAnimationActive={false}>
+              <LabelList dataKey="onFresh" position="top" fill="var(--color-ink-muted)" className="text-[11px] [font-variant-numeric:tabular-nums]" />
+            </Bar>
+            <Bar dataKey="reused" stackId="week" maxBarSize={64} fill="url(#reuse-hatch)" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+              <LabelList dataKey="onReused" position="top" fill="var(--color-ink-muted)" className="text-[11px] [font-variant-numeric:tabular-nums]" />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
       <table className="sr-only">
         <caption>{t("Answers sent each week")}</caption>
         <thead><tr><th>{t("Week of")}</th><th>{t("New answer")}</th><th>{t("Reused for another buyer")}</th></tr></thead>
