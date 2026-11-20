@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, CircleDashed, FileText, Lock } from "lucide-react";
+import { CheckCircle2, CircleDashed, FileText, Lock, Quote } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -15,6 +15,8 @@ interface Cited {
   answers: number;
   last: string | null;
   questions: string[];
+  /** The sentences answers quoted from it, each with its question. */
+  quotes: Array<{ quote: string; question: string }>;
 }
 
 /** Per factory: the documents its answers to this buyer rest on (titles only; files stay with the factory). */
@@ -25,10 +27,11 @@ function byFactory(data: Payload) {
     for (const x of q.questions) {
       const a = data.answers[x.id];
       if (!a?.docTitle) continue;
-      const c = docs.get(a.docTitle) ?? { title: a.docTitle, answers: 0, last: null, questions: [] };
+      const c = docs.get(a.docTitle) ?? { title: a.docTitle, answers: 0, last: null, questions: [], quotes: [] };
       c.answers++;
       if (a.approvedAt && (!c.last || a.approvedAt > c.last)) c.last = a.approvedAt;
       if (c.questions.length < 3) c.questions.push(x.text);
+      if (a.quote && !c.quotes.some((q) => q.quote === a.quote)) c.quotes.push({ quote: a.quote, question: x.text });
       docs.set(a.docTitle, c);
     }
     out.set(q.factory, docs);
@@ -74,6 +77,22 @@ export default function BuyerLibraryPage() {
                       <span className="min-w-0 flex-1">
                         <span className="flex items-start gap-2 text-sm font-medium text-ink"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />{d.title}</span>
                         <span className="block pl-6 text-xs text-ink-faint">{d.questions.join(" · ")}</span>
+                        {d.quotes.length > 0 && (
+                          <details className="group mt-1 pl-6">
+                            <summary className="inline-flex min-h-[32px] cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-brand">
+                              <Quote className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t("View what was quoted from it")} ({d.quotes.length})
+                            </summary>
+                            <ul className="mt-1 flex flex-col gap-2 border-l-2 border-brand pl-3">
+                              {d.quotes.map((q) => (
+                                <li key={q.quote} className="text-sm">
+                                  <span className="italic text-ink">“{q.quote}”</span>
+                                  <span className="block text-xs text-ink-faint">{q.question}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
                       </span>
                       <span className="text-sm text-ink-muted [font-variant-numeric:tabular-nums]">{d.answers} {t(d.answers === 1 ? "answer" : "answers")}{d.last ? ` · ${new Date(d.last).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</span>
                     </li>

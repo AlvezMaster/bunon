@@ -231,6 +231,10 @@ function Detail({ id, graph, data, impact, questionnaireOf, onSelect }: { id: st
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-ink-faint"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{t("Document")}</span>
           <h2 className="text-lg font-semibold text-ink [text-wrap:balance]">{n.label}</h2>
           <Validity daysLeft={d.daysLeft} validUntil={d.validUntil} />
+          <Link href={`/factory/documents/view?id=${encodeURIComponent(n.id.slice(4))}`} className="inline-flex min-h-[32px] items-center gap-1.5 self-start text-sm font-medium text-brand underline-offset-4 hover:underline">
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            {t("View document")}
+          </Link>
         </header>
         <p className="text-sm text-ink-muted">
           {d.answers.length === 0

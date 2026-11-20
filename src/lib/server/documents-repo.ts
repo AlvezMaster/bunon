@@ -71,6 +71,14 @@ export async function listDocuments(orgId: string): Promise<DocumentMeta[]> {
   return [...(orgId === FIXTURE_DOCS_ORG ? demoMetas() : []), ...uploaded];
 }
 
+/** One of this factory's documents with its full text, for the document viewer; null if it is not this factory's. */
+export async function getDocument(orgId: string, docId: string): Promise<{ meta: DocumentMeta; text: string } | null> {
+  const meta = (await listDocuments(orgId)).find((m) => m.id === docId);
+  if (!meta) return null;
+  if (meta.demo) return { meta, text: FACTORY_DOCUMENTS.find((d) => d.id === docId)?.text ?? "" };
+  return { meta, text: (await kvRead<StoredText>(textKey(docId), () => ({ text: "", passages: [] }))).text };
+}
+
 /** Everything retrieval needs for one factory: whole documents (for the quote check) and passages. */
 export async function loadCorpus(orgId: string): Promise<{ docs: FactoryDocument[]; passages: Passage[]; model: string | null }> {
   const model = await embeddingModel();

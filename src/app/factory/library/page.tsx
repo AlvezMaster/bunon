@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, CircleDashed, Cloud, ExternalLink, FileText, Network, UploadCloud } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDashed, Cloud, ExternalLink, Eye, FileText, Network, UploadCloud } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -124,13 +124,14 @@ export default function FactoryLibraryPage() {
                   <th scope="col" className="px-4 py-3 font-semibold">{t("Added")}</th>
                   <th scope="col" className="px-4 py-3 font-semibold">{t("Valid until")}</th>
                   <th scope="col" className="px-4 py-3 font-semibold">{t("Original file")}</th>
+                  <th scope="col" className="px-4 py-3 font-semibold"><span className="sr-only">{t("View")}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {docs?.map((d) => (
                   <tr key={d.id}>
                     <td className="px-4 py-3">
-                      <span className="flex items-start gap-2 font-medium text-ink"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />{d.title}</span>
+                      <Link href={`/factory/documents/view?id=${encodeURIComponent(d.id)}`} className="flex min-h-[32px] items-start gap-2 font-medium text-ink underline-offset-4 hover:text-brand hover:underline"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />{d.title}</Link>
                       <span className="block pl-6 text-xs text-ink-faint">{d.fileName}{d.fromPhoto ? ` · ${t("read from a photo")}` : ""}</span>
                     </td>
                     <td className="px-4 py-3 text-ink-muted [font-variant-numeric:tabular-nums]">{d.demo ? t("Demo document") : day(d.uploadedAt)}</td>
@@ -145,6 +146,12 @@ export default function FactoryLibraryPage() {
                       ) : (
                         <span className="text-ink-faint">{d.demo ? t("Built-in demo text") : t("Text only")}</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/factory/documents/view?id=${encodeURIComponent(d.id)}`} className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-1.5 px-3 text-sm">
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                        {t("View")}
+                      </Link>
                     </td>
                   </tr>
                 ))}

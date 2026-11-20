@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Camera, Library, Network, ExternalLink, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
+import { ArrowRight, Camera, Eye, Library, Network, ExternalLink, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -289,6 +289,10 @@ export default function FactoryDocuments() {
                     </p>
                   </div>
                   {d.embedModel && <span className="w-fit rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">{t("Meaning search")}</span>}
+                  <Link href={`/factory/documents/view?id=${encodeURIComponent(d.id)}`} className="btn-tactile-hollow inline-flex min-h-[44px] w-fit items-center gap-1.5 px-3 text-sm">
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                    {t("View")}
+                  </Link>
                   {!!d.stored && (
                     <a
                       href={`/api/documents/file?id=${encodeURIComponent(d.id)}`}
