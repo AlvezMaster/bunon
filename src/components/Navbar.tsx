@@ -18,6 +18,7 @@ const PUBLIC_LINKS: NavLink[] = [
   { href: "/#who-its-for", label: "Who it's for" },
   { href: "/about", label: "About us" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/docs", label: "Docs" },
 ];
 
 function workspaceLinks(role: UserRole): NavLink[] {

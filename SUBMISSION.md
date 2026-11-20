@@ -7,6 +7,7 @@ Bunon lets a Bangladeshi garment factory answer every buyer's compliance questio
 | | |
 |---|---|
 | Live product | https://bunon-ten.vercel.app |
+| Live docs (pitch, architecture, live numbers) | https://bunon-ten.vercel.app/docs |
 | Code | https://github.com/AlvezMaster/bunon (README has the full technical write-up) |
 | 3-minute video | https://youtu.be/z1i6rHLLpqw |
 | Team | Maku |
