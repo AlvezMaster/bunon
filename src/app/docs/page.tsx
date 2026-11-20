@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Bot, Boxes, CheckCircle2, ClipboardList, Cloud, Database, FileSearch, FileText, Github, Languages, Lock, Network, Play, Quote, Repeat2, ScanText, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
+import { ArrowDown, ArrowRight, Bot, Boxes, CheckCircle2, ClipboardList, Cloud, Database, Eye, FileSearch, FileText, Github, Languages, Lock, Network, Play, Quote, Repeat2, ScanText, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { PLANS, formatBdt } from "@/lib/plans";
 
@@ -24,8 +24,10 @@ const GITHUB = "https://github.com/AlvezMaster/bunon";
 
 const SECTIONS = [
   ["live", "Live numbers"],
+  ["fit", "Built for ComplianceOS"],
   ["problem", "The problem"],
   ["solution", "How Bunon works"],
+  ["action-plan", "Compliance Action Plan"],
   ["system", "Running now"],
   ["architecture", "Architecture"],
   ["apis", "APIs and MCP"],
@@ -45,7 +47,9 @@ const TEAM = [
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
-function Section({ id, n, title, lead, children }: { id: string; n: number; title: string; lead?: string; children: React.ReactNode }) {
+function Section({ id, title, lead, children }: { id: string; n?: number; title: string; lead?: string; children: React.ReactNode }) {
+  // Numbered by its place in the section menu, so adding a section renumbers the rest.
+  const n = SECTIONS.findIndex(([s]) => s === id) + 1;
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -140,6 +144,9 @@ export default function DocsPage() {
           <p className="max-w-[62ch] text-lg leading-relaxed text-ink-muted [text-wrap:pretty]">
             Bunon (বুনন, &ldquo;weaving&rdquo;) is a compliance OS for Bangladesh&rsquo;s garment factories. AI drafts each buyer&rsquo;s compliance answer from the factory&rsquo;s own documents and quotes the sentence it used; a person checks and sends it; every answer is sealed in a tamper-evident record and reused when the next buyer asks the same thing.
           </p>
+          <p className="max-w-[62ch] text-lg leading-relaxed text-ink [text-wrap:pretty]">
+            When a law, the minimum wage or a buyer&rsquo;s code of conduct changes, Bunon detects it and builds a <strong className="font-semibold">Compliance Action Plan</strong>: what the change affects, a redrafted policy and the fixes, each approved by a person.
+          </p>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/login" className="btn-primary-action min-h-[48px]">
               Try the live demo
@@ -191,6 +198,40 @@ export default function DocsPage() {
             </ul>
           </Section>
 
+          <Section id="fit" title="Built for ComplianceOS" lead="JusticeSphere AI asks for systems that turn dense legal and regulatory complexity into actionable, auditable intelligence. Here is each part of the ComplianceOS brief, and what in Bunon answers it.">
+            <div className="glass-card overflow-x-auto">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <caption className="sr-only">ComplianceOS brief mapped to Bunon</caption>
+                <thead className="text-xs uppercase tracking-[0.06em] text-ink-faint">
+                  <tr className="border-b border-line"><th scope="col" className="px-4 py-3">The brief asks for</th><th scope="col" className="px-4 py-3">Bunon</th><th scope="col" className="px-4 py-3">Status</th></tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {[
+                    ["Detect a regulatory change (agents monitoring legislative feeds)", "Bunon watches the rules that apply to a factory (minimum wage, wage payment, working hours, buyers' codes) and reports a new version on its own.", "Built · demo rule versions; real Gazette, DIFE and EUR-Lex feeds next", false],
+                    ["Generate a Compliance Action Plan", "Regulatory diff (what changed, including number words), the documents and sent answers that rest on the old wording, and the buyers to tell.", "Built · 10 / 10 on a labelled stress test", true],
+                    ["Updated policy drafts", "The affected policy passage, redrafted with the new values, for a person to check.", "Built", true],
+                    ["List of required fixes", "A fix list; a person approves each fix, and every approval is written to the hash-chained activity log.", "Built", true],
+                    ["RAG over legal and compliance text", "Hybrid search (keywords + pgvector) over each factory's compliance documents, with contextual chunking; answers quote their source word for word.", "Built · 16 / 16 right document in the top 4", true],
+                    ["Vision for physical compliance documents", "Photos and scans of licences are read by Qwen vision and marked for a person to check.", "Built", true],
+                    ["Documents and digital workflows together, beyond static checklists", "Buyer questionnaires, answer reuse, the evidence map and the document library work on the same documents.", "Built", true],
+                    ["Synthetic edge cases to stress-test automated auditing", "Labelled synthetic rule changes, including look-alike numbers, test the action plan.", "Built", true],
+                  ].map(([ask, bunon, status, done]) => (
+                    <tr key={String(ask)}>
+                      <th scope="row" className="px-4 py-3 align-top font-medium text-ink">{ask}</th>
+                      <td className="px-4 py-3 align-top text-ink-muted">{bunon}</td>
+                      <td className="px-4 py-3 align-top">
+                        <span className={`inline-flex items-start gap-1.5 text-xs font-medium ${done ? "text-success" : "text-brand"}`}>
+                          <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
           <Section id="problem" n={2} title="Every buyer asks the same questions, in its own form" lead="A factory sells to many brands, and each brand sends its own questionnaire about the same things: fire safety, wages, working hours, child labour. Compliance officers copy the same facts from folders of licences and policies into form after form, and a wrong or out-of-date answer can cost an order.">
             <ul className="grid gap-3 sm:grid-cols-3">
               <Metric value="3,555" label="Export garment factories in Bangladesh" />
@@ -210,9 +251,44 @@ export default function DocsPage() {
               ]}
             />
             <div className="grid gap-3 md:grid-cols-3">
-              <div className="glass-card flex flex-col gap-1.5 p-5"><ClipboardList className="h-5 w-5 text-brand" aria-hidden="true" /><span className="font-semibold text-ink">Compliance Action Plan</span><span className="text-sm text-ink-muted">When a watched rule changes, Bunon finds what rests on the old wording, redrafts the policy and lists the fixes for a person to approve.</span></div>
+              <div className="glass-card flex flex-col gap-1.5 p-5"><FileSearch className="h-5 w-5 text-brand" aria-hidden="true" /><span className="font-semibold text-ink">Document library and viewer</span><span className="text-sm text-ink-muted">The nine documents buyers usually ask for, marked on file, missing or expiring; every document opens with its quoted sentences highlighted.</span></div>
               <div className="glass-card flex flex-col gap-1.5 p-5"><Network className="h-5 w-5 text-brand" aria-hidden="true" /><span className="font-semibold text-ink">Evidence map</span><span className="text-sm text-ink-muted">A graph of documents → answers → buyers: who is affected when a certificate changes or expires.</span></div>
               <div className="glass-card flex flex-col gap-1.5 p-5"><Languages className="h-5 w-5 text-brand" aria-hidden="true" /><span className="font-semibold text-ink">Bangla and English</span><span className="text-sm text-ink-muted">The whole app in both languages; Bangla questions search English documents through a glossary.</span></div>
+            </div>
+          </Section>
+
+          <Section id="action-plan" title="Compliance Action Plan" lead="The heart of ComplianceOS: a rule changes, and the factory knows within seconds what it affects and what to fix. Nothing is changed or sent automatically; a person approves every fix.">
+            <Flow
+              steps={[
+                { Icon: Eye, title: "Change detected", text: "A watched rule has a newer version than the one the factory last reviewed." },
+                { Icon: ScanText, title: "Regulatory diff", text: "Which values changed, in digits or words (seventh → fifth)." },
+                { Icon: Network, title: "Impact", text: "Documents stating the old value, documents already meeting the new one, sent answers and buyers affected." },
+                { Icon: FileText, title: "Redraft + fixes", text: "The policy passage with the new values, and the list of fixes." },
+                { Icon: UserCheck, title: "Approved and logged", text: "A person approves each fix; each approval is a hash-chained activity log entry." },
+              ]}
+            />
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <figure className="glass-card flex flex-col gap-3 p-5">
+                <figcaption className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-faint">Example from the demo (a labelled demo rule change)</figcaption>
+                <div className="flex flex-col gap-2 text-sm">
+                  <p className="font-medium text-ink">Garment sector minimum wage</p>
+                  <p className="text-ink-muted"><span className="line-through decoration-danger/60">BDT 12,500 per month</span> <ArrowRight className="inline h-3.5 w-3.5" aria-label="becomes" /> <span className="font-semibold text-ink">BDT 15,000 per month</span></p>
+                  <p className="flex items-start gap-2 text-ink"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />Wage and benefits policy: states the old wording</p>
+                  <p className="rounded-lg border border-success/40 bg-success-soft p-3 text-ink">&ldquo;All workers are paid at or above the legal minimum wage for the garment sector, which is BDT 15,000 per month for the entry grade.&rdquo;</p>
+                  <ol className="flex flex-col gap-1 text-ink-muted">
+                    <li>1. Update &ldquo;Wage and benefits policy&rdquo; (12,500 → 15,000) and upload the new version.</li>
+                    <li>2. Check that practice matches the new rule: payroll, records and notices on the floor.</li>
+                  </ol>
+                </div>
+              </figure>
+              <div className="flex flex-col gap-3">
+                <Metric value="10 / 10" label="Correct plans on 10 labelled synthetic rule changes" note="0 documents missed, 0 false alarms; 5 / 5 redrafts carry the new value" />
+                <Metric value={stats ? String(stats.watchedRules) : "–"} label="Rules watched for every factory" note="Demo versions now; real feeds (Gazette, DIFE, EUR-Lex, buyers' codes) next" />
+                <Link href="/login?next=%2Ffactory%2Faction-plan" className="btn-primary-action min-h-[48px] self-start">
+                  Open the action plan
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           </Section>
 
@@ -238,7 +314,7 @@ export default function DocsPage() {
             </ul>
           </Section>
 
-          <Section id="architecture" n={5} title="Architecture and data flow" lead="Two pipelines in the app's own TypeScript code: one turns documents into searchable passages, one turns a buyer's question into a checked, sourced answer.">
+          <Section id="architecture" n={5} title="Architecture and data flow" lead="Three pipelines in the app's own TypeScript code: documents become searchable passages, a buyer's question becomes a checked, sourced answer, and a rule change becomes a Compliance Action Plan.">
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-faint">Documents in</p>
               <Flow
@@ -259,6 +335,18 @@ export default function DocsPage() {
                   { Icon: Sparkles, title: "Qwen drafts", text: "Answer + exact quote + source, from that factory's documents only." },
                   { Icon: ShieldCheck, title: "Checks", text: "Quote must appear word for word; a second model must agree; else a person answers." },
                   { Icon: Lock, title: "Sent and sealed", text: "A person sends it; SHA-256 hash-chained activity log." },
+                ]}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-faint">Rule changes in</p>
+              <Flow
+                steps={[
+                  { Icon: Eye, title: "Watched rule", text: "A newer version than the factory's last review is reported on its own." },
+                  { Icon: ScanText, title: "Regulatory diff", text: "Changed values, as digits or number words." },
+                  { Icon: FileSearch, title: "Impact search", text: "Hybrid search for the old wording; a value counts only beside the same kind of word." },
+                  { Icon: Network, title: "Evidence graph", text: "Sent answers and buyers that rest on the affected documents." },
+                  { Icon: ClipboardList, title: "Plan, approved", text: "Redraft and fix list; each approval written to the activity log." },
                 ]}
               />
             </div>
