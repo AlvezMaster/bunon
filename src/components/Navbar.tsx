@@ -24,7 +24,7 @@ function workspaceLinks(role: UserRole): NavLink[] {
   const report = { href: "/reports", label: "Reports", also: "/passport" };
   return role === "factory"
     ? [{ href: "/factory", label: "Dashboard", exact: true }, { href: "/factory/orders", label: "Orders", match: "/factory/order" }, { href: "/factory/questionnaire", label: "Questions" }, { href: "/factory/documents", label: "Documents" }, { href: "/factory/buyers", label: "Buyers" }, { href: "/factory/agents", label: "AI agents" }, report]
-    : [{ href: "/buyer", label: "Dashboard", exact: true }, { href: "/buyer/verify", label: "Verify a supplier" }, { href: "/buyer/questions", label: "Questions" }, { href: "/buyer/factories", label: "Factories" }, { href: "/buyer/agents", label: "AI agents" }, report];
+    : [{ href: "/buyer", label: "Dashboard", exact: true }, { href: "/buyer/verify", label: "Verify a supplier" }, { href: "/buyer/questions", label: "Questions" }, { href: "/buyer/factories", label: "Factories" }, { href: "/buyer/library", label: "Documents" }, { href: "/buyer/agents", label: "AI agents" }, report];
 }
 
 export const ROLE_LABEL: Record<UserRole, string> = {

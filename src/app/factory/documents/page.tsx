@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Camera, Network, ExternalLink, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
+import { ArrowRight, Camera, Library, Network, ExternalLink, FileText, RefreshCw, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -141,6 +141,10 @@ export default function FactoryDocuments() {
         >
           <div className="flex flex-wrap items-center gap-3">
             <DemoDataBadge />
+            <Link href="/factory/library" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
+              <Library className="h-4 w-4" aria-hidden="true" />
+              {t("Document library")}
+            </Link>
             <Link href="/factory/evidence" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
               <Network className="h-4 w-4" aria-hidden="true" />
               {t("Evidence map")}
