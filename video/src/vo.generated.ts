@@ -112,7 +112,7 @@ export const VO: VoClips = {
   },
   "27": {
     "file": "line-28.wav",
-    "seconds": 4.4
+    "seconds": 6.2
   },
   "28": {
     "file": "line-29.wav",

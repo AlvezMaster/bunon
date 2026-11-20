@@ -238,13 +238,13 @@ export const SEGMENTS: Segment[] = [
         },
       },
       {
-        // The account page (src/app/account/page.tsx), shown for a new fictional factory on Starter.
-        text: "And one account page lets anyone change their passphrase, or sign out everywhere.",
+        // The Compliance Action Plan (src/app/factory/action-plan/page.tsx), with its labelled demo rule change.
+        text: "And when a rule changes, the Compliance Action Plan shows what it affects and drafts the fixes.",
         visual: {
-          kind: "screen", url: `${APP}/account`, role: "Factory", frames: [[0, "account-0"], [0.6, "account-1"]],
-          cam: [[0, 720, 470, 1.05], [0.25, 720, 330, 1.22], [0.45, 640, 870, 1.18], [1, 640, 900, 1.22]],
-          cursor: [[0.08, 1000, 420], [0.28, 914, 244], [0.52, 538, 982]], clicks: [0.57],
-          callouts: [{ t: 0.18, to: 0.42, x: 914, y: 268, text: "Plan at a glance", side: "bottom" }, { t: 0.68, x: 640, y: 1040, text: "Other devices signed out", side: "bottom" }],
+          kind: "screen", url: `${APP}/factory/action-plan`, role: "Factory", frames: [[0, "action-plan-0"], [0.45, "action-plan-1"]],
+          cam: [[0, 720, 450, 1.05], [0.35, 600, 600, 1.15], [0.6, 720, 900, 1.1], [0.8, 720, 1196, 1.12], [1, 720, 1450, 1.12]],
+          cursor: [[0.1, 1000, 420], [0.36, 429, 644]], clicks: [0.4],
+          callouts: [{ t: 0.62, to: 0.8, x: 720, y: 1090, text: "Policy redrafted", side: "top" }, { t: 0.84, x: 720, y: 1400, text: "Fixes for a person to approve", side: "top" }],
         },
       },
     ],

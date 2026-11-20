@@ -35,19 +35,19 @@ Pronunciation: write Bunon as "Boo-non", SLCP as "S. L. C. P.", Qwen as "Kwen" i
 
 | # | Start | Length | Words | Voice clip | Line |
 |---|---|---|---|---|---|
-| 16 | 1:00.0 | 5.0 s | 15 | 4.4 s | A buyer writes one questionnaire and sends it to all of its factories at once. |
-| 17 | 1:05.0 | 4.3 s | 14 | 3.7 s | Each factory finds it in its inbox, with its own documents already on file. |
-| 18 | 1:09.3 | 4.3 s | 12 | 3.7 s | One click drafts every answer, and each draft quotes its source sentence. |
-| 19 | 1:13.7 | 4.4 s | 16 | 3.8 s | When a draft doesn't hold up, Bunon never guesses. It hands the question to a person. |
-| 20 | 1:18.1 | 3.8 s | 13 | 3.2 s | The factory approves and sends, and the answer is sealed in the ledger. |
-| 21 | 1:21.9 | 4.6 s | 17 | 3.9 s | When another buyer asks the same thing in other words, the earlier answer is ready to check. |
-| 22 | 1:26.4 | 6.9 s | 19 | 6.1 s | A factory can also connect its own AI agent: it prepares answers, and a person checks and sends them. |
-| 23 | 1:33.3 | 4.7 s | 12 | 4.1 s | Setting it up takes three steps, and one click tests the connection. |
-| 24 | 1:38.0 | 4.7 s | 15 | 4.1 s | The buyer sees every factory's answer side by side, with the source of each one. |
-| 25 | 1:42.7 | 4.3 s | 12 | 3.7 s | Each home screen shows only the next job, with one big button. |
-| 26 | 1:47.0 | 3.5 s | 12 | 3.0 s | Factory staff can switch the whole workspace to Bangla with one click. |
-| 27 | 1:50.5 | 4.5 s | 15 | 3.9 s | Either side can unlink, with a 12-hour undo and 30 days to download its data. |
-| 28 | 1:55.0 | 5.0 s | 13 | 4.4 s | And one account page lets anyone change their passphrase, or sign out everywhere. |
+| 16 | 1:00.0 | 4.8 s | 15 | 4.4 s | A buyer writes one questionnaire and sends it to all of its factories at once. |
+| 17 | 1:04.8 | 4.2 s | 14 | 3.7 s | Each factory finds it in its inbox, with its own documents already on file. |
+| 18 | 1:09.0 | 4.2 s | 12 | 3.7 s | One click drafts every answer, and each draft quotes its source sentence. |
+| 19 | 1:13.2 | 4.3 s | 16 | 3.8 s | When a draft doesn't hold up, Bunon never guesses. It hands the question to a person. |
+| 20 | 1:17.5 | 3.6 s | 13 | 3.2 s | The factory approves and sends, and the answer is sealed in the ledger. |
+| 21 | 1:21.2 | 4.4 s | 17 | 3.9 s | When another buyer asks the same thing in other words, the earlier answer is ready to check. |
+| 22 | 1:25.6 | 6.6 s | 19 | 6.1 s | A factory can also connect its own AI agent: it prepares answers, and a person checks and sends them. |
+| 23 | 1:32.2 | 4.5 s | 12 | 4.1 s | Setting it up takes three steps, and one click tests the connection. |
+| 24 | 1:36.7 | 4.6 s | 15 | 4.1 s | The buyer sees every factory's answer side by side, with the source of each one. |
+| 25 | 1:41.3 | 4.2 s | 12 | 3.7 s | Each home screen shows only the next job, with one big button. |
+| 26 | 1:45.5 | 3.4 s | 12 | 3.0 s | Factory staff can switch the whole workspace to Bangla with one click. |
+| 27 | 1:48.9 | 4.4 s | 15 | 3.9 s | Either side can unlink, with a 12-hour undo and 30 days to download its data. |
+| 28 | 1:53.3 | 6.7 s | 17 | 6.2 s | And when a rule changes, the Compliance Action Plan shows what it affects and drafts the fixes. |
 
 ## 4. AI approach (2:00.0–2:30.0)
 
