@@ -58,7 +58,8 @@ Buyer's question ─────────────────────
 - **Agents (MCP, two servers):** a factory can connect its own AI agent through the factory MCP server (`/api/mcp/factory`): 10 tools scoped to that factory; it can prepare answers but only a person can send them. A buyer can connect its agent to the read-only buyer MCP server (`/api/mcp/buyer`): 6 tools to read answers with their source sentence, search answers across factories and read its activity log.
 - **Compliance Action Plan** (`/factory/action-plan`): Bunon watches a list of rules (minimum wage, wage payment, working hours, minimum age; labelled demo versions for now). When a newer version appears than the one the factory last reviewed, the page reports the change on its own and builds the plan: a regulatory diff (what changed, numbers and number words), the documents that state the old wording and those that already meet the new one, the sent answers and buyers affected, a redrafted policy passage, and a fix list. A person approves each fix; every approval and review is recorded in the activity log. Real feeds (Gazette, DIFE, EUR-Lex, buyers' codes) are next.
 - **Sample agent** (`examples/factory-agent`): a small factory agent built with the Vercel AI SDK agent loop, running Qwen locally through Ollama, using Bunon's factory MCP server as its tools.
-- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 92 automated tests.
+- **Vector database:** passage embeddings (Qwen3-Embedding, 1024 dimensions) are stored in **pgvector on Supabase**; meaning search asks Postgres for the nearest passages by cosine distance, within one factory's documents, through a function only Bunon's server can call (row level security on, no public access). If Supabase is slow or down, search falls back to Bunon's in-app vector search.
+- **Stack:** Next.js 16 on Vercel, Cloudflare D1 (main database), Supabase Postgres + pgvector (vector search), Cloudinary (private original files), TypeScript; 92 automated tests.
 
 ### Data and sovereignty strategy
 - **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
@@ -111,7 +112,7 @@ Buyer's question ─────────────────────
 ## 4. Measured results (our own tests; small labelled sets on synthetic documents)
 | Test | Result |
 |---|---|
-| Right document in the top 4 (hybrid search, 16 reworded questions, 4 in Bangla) | 16 / 16 |
+| Right document in the top 4 (hybrid search, 16 reworded questions, 4 in Bangla; live site, meaning search on Supabase pgvector) | 16 / 16 (first: 14 / 16) |
 | Correct cited answers, local Qwen 3.5 4B (13 labelled questions) | 8 / 10, with 0 wrong drafts kept and 3 / 3 left for a person |
 | Language bias check, after fixes | Bangla 8 / 10 = English 8 / 10; Bangla search on new questions 7 / 8 vs English 6 / 8 |
 | Answer reuse (40 questions from two more buyers) | 18 / 24 repeats found, 16 / 16 look-alikes left alone, **0 wrong suggestions** |

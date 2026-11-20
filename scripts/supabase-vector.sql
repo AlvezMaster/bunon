@@ -33,3 +33,6 @@ as $$
   limit match_count;
 $$;
 revoke execute on function public.bunon_match_passages(extensions.vector, text, text, int) from public, anon, authenticated;
+
+-- Make the REST API see the new table and function right away.
+notify pgrst, 'reload schema';
