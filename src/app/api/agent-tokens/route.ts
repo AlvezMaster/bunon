@@ -13,15 +13,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Agent tokens for the factory MCP endpoint. Only a signed-in person at a factory may list, make or revoke them;
- * an agent can never manage tokens. Making and revoking a token is recorded in the factory's ledger.
+ * Agent tokens for the MCP endpoints: a factory's tokens open the factory MCP server, a buyer's the read-only buyer
+ * MCP server. Only a signed-in person may list, make or revoke them; an agent can never manage tokens. Making and
+ * revoking a token is recorded in the organisation's ledger. Buyers join free, so their read-only agents need no plan.
  *
  *   GET                                   this factory's tokens (never the token values)
  *   POST { action: "create", name }       a new token, shown once
  *   POST { action: "revoke", id }
  */
 async function guard(req: NextRequest) {
-  const g = await requireSession(req, ["factory"]);
+  const g = await requireSession(req, ["factory", "buyer"]);
   if (!g.ok) return { error: g.response };
   if (isAgentSession(g.session)) return { error: NextResponse.json({ error: "An AI agent can't manage agent tokens." }, { status: 403 }) };
   return { session: g.session, scope: await scopeFor(g.session) };
@@ -34,10 +35,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     tokens: await listAgentTokens(g.scope.orgId),
     max: MAX_TOKENS_PER_FACTORY,
-    endpoint: `${req.nextUrl.origin}/api/mcp/factory`,
+    endpoint: `${req.nextUrl.origin}/api/mcp/${g.session.role}`,
     plan,
-    /** False on Starter: the page shows an upgrade card instead of the setup steps. */
-    allowed: PLANS[plan].limits.agentTokens !== 0,
+    /** False on a factory's Starter plan: the page shows an upgrade card instead of the setup steps. */
+    allowed: g.session.role === "buyer" || PLANS[plan].limits.agentTokens !== 0,
   });
 }
 
@@ -52,10 +53,10 @@ export async function POST(req: NextRequest) {
   };
 
   if (body?.action === "create") {
-    if (PLANS[(await getSubscription(g.scope.orgId)).plan].limits.agentTokens === 0) return fail("AI agents are part of the Pro and Enterprise plans. Upgrade on the Billing page.", 402);
+    if (g.session.role === "factory" && PLANS[(await getSubscription(g.scope.orgId)).plan].limits.agentTokens === 0) return fail("AI agents are part of the Pro and Enterprise plans. Upgrade on the Billing page.", 402);
     try {
-      const { token, meta } = await createAgentToken(g.scope.orgId, String(body.name ?? ""), g.session.name);
-      await record("AGENT TOKEN CREATED", `${g.session.name} made agent token ${meta.id} ("${meta.name}") for the factory MCP connector.`);
+      const { token, meta } = await createAgentToken(g.scope.orgId, String(body.name ?? ""), g.session.name, g.session.role === "buyer" ? "buyer" : "factory");
+      await record("AGENT TOKEN CREATED", `${g.session.name} made agent token ${meta.id} ("${meta.name}") for the ${g.session.role} MCP connector.`);
       return NextResponse.json({ token, meta }, { status: 201 });
     } catch (error) {
       if (error instanceof KvAbort) return fail(error.message, 409);

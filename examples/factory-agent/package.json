@@ -1,0 +1,14 @@
+{
+  "name": "bunon-factory-agent-example",
+  "private": true,
+  "type": "module",
+  "description": "A small factory AI agent built with the Vercel AI SDK. It connects to Bunon's factory MCP server and prepares answers for a person to check.",
+  "scripts": {
+    "start": "node agent.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/mcp": "^2.0.101",
+    "@ai-sdk/openai-compatible": "^3.0.93",
+    "ai": "^7.0.177"
+  }
+}

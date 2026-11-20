@@ -34,4 +34,5 @@ next-env.d.ts
 
 # demo video (Remotion)
 /video/node_modules
+/examples/*/node_modules
 /video/out

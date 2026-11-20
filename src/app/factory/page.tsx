@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, FileText, History, MessageSquareText, Package, ShieldAlert, ShieldCheck, UserPlus } from "lucide-react";
+import { FilePlus2, FileText, History, MessageSquareText, Package, ShieldAlert, ShieldCheck, UserPlus, Network } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader, NextUp, Panel, QuickLinks, RowLink, StatusBadge, type NextUpTask, type QuickLink } from "@/components/dashboard/DashboardParts";
@@ -100,6 +100,7 @@ export default function FactoryDashboard() {
     { href: "/factory/questionnaire", Icon: MessageSquareText, label: "Questions", count: questions ? waiting.length : undefined },
     { href: "/factory/orders", Icon: Package, label: "Orders", count: orders.length },
     { href: "/factory/documents", Icon: FileText, label: "Documents", count: docCount ?? undefined },
+    { href: "/factory/evidence", Icon: Network, label: "Evidence map" },
     { href: "/factory/buyers", Icon: UserPlus, label: "Buyers", count: buyers },
     { href: "/ledger", Icon: History, label: "Activity log" },
   ];

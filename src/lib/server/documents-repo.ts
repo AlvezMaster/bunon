@@ -13,7 +13,7 @@ import { kvRead, kvReadMany, kvUpdate } from "./kv.ts";
 import { embed, embeddingModel } from "./embeddings.ts";
 import { FIXTURE_DOCS_ORG } from "./accounts-repo.ts";
 import { FACTORY_DOCUMENTS, type FactoryDocument } from "../fixtures/factory-documents.ts";
-import { chunkText, quantize, type Passage } from "../rag.ts";
+import { chunkText, embedText, quantize, type Passage } from "../rag.ts";
 
 export interface DocumentMeta {
   id: string;
@@ -45,7 +45,7 @@ interface StoredText {
 export const MAX_DOCUMENTS = 1000;
 const listKey = (orgId: string) => `docs:${orgId}`;
 const textKey = (docId: string) => `doc:${docId}`;
-const FIXTURE_VEC_KEY = (model: string) => `docvec:fixtures:${model}`;
+const FIXTURE_VEC_KEY = (model: string) => `docvec:fixtures:v2:${model}`;
 
 function demoMetas(): DocumentMeta[] {
   return FACTORY_DOCUMENTS.map((d) => ({
@@ -97,7 +97,7 @@ async function withFixtureVectors(model: string, demo: Passage[]): Promise<Passa
   let vecs = await kvRead<Record<string, string>>(FIXTURE_VEC_KEY(model), () => ({}));
   const missing = demo.filter((p) => !vecs[p.id]);
   if (missing.length) {
-    const made = await embed("documents", missing.map((p) => `${p.title}\n${p.text}`));
+    const made = await embed("documents", missing.map(embedText));
     if (made && made.model === model) {
       const add = Object.fromEntries(missing.map((p, i) => [p.id, quantize(made.vectors[i])]));
       vecs = await kvUpdate<Record<string, string>>(FIXTURE_VEC_KEY(model), () => ({}), (all) => {
@@ -125,7 +125,7 @@ export interface NewDocument {
 export async function addDocument(d: NewDocument): Promise<DocumentMeta> {
   const id = `doc-${randomBytes(5).toString("hex")}`;
   const passages = chunkText(id, d.title, d.text);
-  const made = await embed("documents", passages.map((p) => `${d.title}\n${p.text}`));
+  const made = await embed("documents", passages.map(embedText));
   const withVec = made ? passages.map((p, i) => ({ ...p, vec: quantize(made.vectors[i]) })) : passages;
   const meta: DocumentMeta = {
     id,

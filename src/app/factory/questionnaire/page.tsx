@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText, Network } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DemoDataBadge from "@/components/DemoDataBadge";
 import { DashboardHeader } from "@/components/dashboard/DashboardParts";
@@ -27,6 +27,10 @@ export default function FactoryQuestionsInbox() {
             <Link href="/factory/documents" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
               <FileText className="h-4 w-4" aria-hidden="true" />
               {t("Your documents")}
+            </Link>
+            <Link href="/factory/evidence" className="btn-tactile-hollow inline-flex min-h-[44px] items-center gap-2 px-4 text-sm">
+              <Network className="h-4 w-4" aria-hidden="true" />
+              {t("Evidence map")}
             </Link>
           </div>
         </DashboardHeader>

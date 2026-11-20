@@ -1,7 +1,8 @@
 /**
- * API tokens that let a factory's own AI agent use Bunon through the factory MCP endpoint (/api/mcp/factory).
+ * API tokens that let an organisation's own AI agent use Bunon: a factory's agent through the factory MCP endpoint
+ * (/api/mcp/factory), a buyer's agent through the read-only buyer MCP endpoint (/api/mcp/buyer).
  *
- * A token belongs to one factory and is shown once when it is made; only its SHA-256 hash is stored, so a leaked
+ * A token belongs to one organisation and is shown once when it is made; only its SHA-256 hash is stored, so a leaked
  * database does not leak working tokens. The factory can revoke a token at any time. Server-only.
  */
 import { createHash, randomBytes } from "node:crypto";
@@ -16,7 +17,12 @@ export interface AgentToken {
   createdAt: string;
   createdBy: string;
   lastUsedAt: string | null;
+  /** Which MCP server the token is for. Missing on older tokens, which are all factory tokens. */
+  role?: "factory" | "buyer";
 }
+
+/** The MCP server a token belongs to. */
+export const tokenRole = (t: Pick<AgentToken, "role">): "factory" | "buyer" => t.role ?? "factory";
 
 export const MAX_TOKENS_PER_FACTORY = 5;
 const KEY = "agent:tokens";
@@ -24,13 +30,13 @@ const none = () => ({}) as Record<string, AgentToken>;
 const hashOf = (token: string) => createHash("sha256").update(token).digest("hex");
 
 /** Makes a token; the plain value is returned only here. */
-export async function createAgentToken(orgId: string, name: string, createdBy: string): Promise<{ token: string; meta: Omit<AgentToken, "hash"> }> {
+export async function createAgentToken(orgId: string, name: string, createdBy: string, role: "factory" | "buyer" = "factory"): Promise<{ token: string; meta: Omit<AgentToken, "hash"> }> {
   const clean = name.trim().replace(/\s+/g, " ").slice(0, 60) || "AI agent";
   const token = `bnn_agent_${randomBytes(24).toString("base64url")}`;
-  const meta: AgentToken = { id: randomBytes(4).toString("hex"), orgId, name: clean, hash: hashOf(token), createdAt: new Date().toISOString(), createdBy, lastUsedAt: null };
+  const meta: AgentToken = { id: randomBytes(4).toString("hex"), orgId, name: clean, hash: hashOf(token), createdAt: new Date().toISOString(), createdBy, lastUsedAt: null, ...(role === "buyer" ? { role } : {}) };
   await kvUpdate<Record<string, AgentToken>>(KEY, none, (all) => {
     if (Object.values(all).filter((t) => t.orgId === orgId).length >= MAX_TOKENS_PER_FACTORY) {
-      throw new KvAbort(`A factory can have at most ${MAX_TOKENS_PER_FACTORY} agent tokens. Revoke one first.`);
+      throw new KvAbort(`You can have at most ${MAX_TOKENS_PER_FACTORY} agent tokens. Revoke one first.`);
     }
     all[meta.hash] = meta;
   });

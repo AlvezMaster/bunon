@@ -60,7 +60,7 @@ export const FACTORY_TOOLS = [
   { name: "list_orders", description: "The factory's orders with their buyer and whether every supplier certificate is in date.", inputSchema: { type: "object", properties: {} } },
 ];
 
-interface Ctx {
+export interface Ctx {
   origin: string;
   cookie: string;
 }
@@ -74,7 +74,7 @@ export async function agentContext(token: AgentToken, origin: string): Promise<C
 
 type Handler = (req: NextRequest) => Promise<Response>;
 
-async function call<T = Record<string, unknown>>(handler: Handler, ctx: Ctx, path: string, body?: unknown): Promise<T> {
+export async function call<T = Record<string, unknown>>(handler: Handler, ctx: Ctx, path: string, body?: unknown): Promise<T> {
   const req = new NextRequest(new URL(path, ctx.origin), {
     method: body === undefined ? "GET" : "POST",
     headers: { cookie: `${SESSION_COOKIE_NAME}=${ctx.cookie}`, "content-type": "application/json" },
@@ -94,7 +94,7 @@ interface QPayload {
   documents: Array<{ id: string; title: string; fileName: string }>;
 }
 
-const orgName = (s: string) => s.replace(/\s*\(.*\)\s*$/, "").trim();
+export const orgName = (s: string) => s.replace(/\s*\(.*\)\s*$/, "").trim();
 
 export async function runFactoryTool(name: string, args: Record<string, unknown>, ctx: Ctx): Promise<Record<string, unknown>> {
   const q = () => call<QPayload>(questionnaireGET, ctx, "/api/questionnaire");

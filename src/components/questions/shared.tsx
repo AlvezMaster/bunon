@@ -12,6 +12,8 @@ export interface Doc {
   title: string;
   fileName: string;
   text?: string;
+  /** Factory only: when the document stops being valid. */
+  validUntil?: string | null;
 }
 export interface Approved {
   questionId: string;

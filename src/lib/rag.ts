@@ -17,6 +17,12 @@ export interface Passage {
   docId: string;
   title: string;
   text: string;
+  /**
+   * Where the passage sits: document title, the section heading above it, and the document's opening sentence.
+   * Searched and embedded with the passage, never quoted (contextual chunking). Missing on passages stored
+   * before it existed; those fall back to the title.
+   */
+  context?: string;
   /** Embedding as base64 int8 (see quantize); missing when no embedding model was available. */
   vec?: string;
 }
@@ -33,39 +39,67 @@ export interface RankedPassage {
 
 // ------------------------------------------------------------------ chunking
 
+/** A section heading: a short line without closing punctuation ("3. Overtime", "## Wages", "SECTION 4 LEAVE"). */
+export function isHeading(line: string): boolean {
+  const l = line.trim();
+  if (l.length < 3 || l.length > 80 || /[.!?।:;,]$/.test(l)) return false;
+  return /^#{1,6}\s/.test(l) || /^\d+(\.\d+)*[.)]?\s+\S/.test(l) || /^(section|part|chapter|article)\s+\w+/i.test(l) || l.split(/\s+/).length <= 6;
+}
+
+/** The document's opening sentence, the context for every later passage (at most 160 characters). */
+function leadOf(text: string): string {
+  const first = text.split(/\n/)[0]?.split(/(?<=[.!?।])\s+/)[0]?.trim() ?? "";
+  if (!first || isHeading(first)) return "";
+  return first.length > 160 ? `${first.slice(0, 159).trimEnd()}…` : first;
+}
+
 /**
  * Splits text into passages of roughly `target` characters along paragraph and sentence lines,
- * so a quoted sentence is never cut in half.
+ * so a quoted sentence is never cut in half. Each passage keeps its context (contextual chunking): the document
+ * title, the section heading it falls under and the document's opening sentence. So a passage deep in a long
+ * policy still matches a question about that policy's subject, while the quote stays the passage's own words.
  */
 export function chunkText(docId: string, title: string, text: string, target = 700, max = 1100): Passage[] {
   const clean = text.replace(/\r/g, "").replace(/[ \t]+/g, " ").trim();
   // Paragraphs: blank lines, or single line breaks when the text has no blank lines (common in PDFs).
   const paras = (/\n\s*\n/.test(clean) ? clean.split(/\n\s*\n/) : clean.split(/\n/)).map((p) => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
-  const pieces: string[] = [];
+  const pieces: Array<{ text: string; heading: string }> = [];
+  let heading = "";
   for (const p of paras) {
+    if (isHeading(p)) heading = p.replace(/^#{1,6}\s+/, "");
     if (p.length <= max) {
-      pieces.push(p);
+      pieces.push({ text: p, heading });
       continue;
     }
     // A very long paragraph is split between sentences.
     let buf = "";
     for (const s of p.split(/(?<=[.!?।])\s+/)) {
       if (buf && buf.length + s.length + 1 > target) {
-        pieces.push(buf);
+        pieces.push({ text: buf, heading });
         buf = s;
       } else buf = buf ? `${buf} ${s}` : s;
     }
-    if (buf) pieces.push(buf);
+    if (buf) pieces.push({ text: buf, heading });
   }
   // Short neighbours are joined so a heading stays with the text under it.
-  const merged: string[] = [];
+  const merged: Array<{ text: string; heading: string }> = [];
   for (const piece of pieces) {
     const last = merged[merged.length - 1];
-    if (last !== undefined && last.length + piece.length + 2 <= target) merged[merged.length - 1] = `${last}\n\n${piece}`;
-    else merged.push(piece);
+    // A heading always goes with the text under it (up to `max`), so no passage is a heading alone.
+    const fits = last !== undefined && last.text.length + piece.text.length + 2 <= (isHeading(last.text) ? max : target);
+    if (last !== undefined && fits) last.text = `${last.text}\n\n${piece.text}`;
+    else merged.push({ ...piece });
   }
-  return merged.map((t, i) => ({ id: `${docId}#${i}`, docId, title, text: t }));
+  const lead = leadOf(clean);
+  return merged.map((m, i) => {
+    const section = m.heading && !m.text.startsWith(m.heading) ? m.heading : "";
+    const opening = i > 0 && lead && !m.text.includes(lead) ? lead : "";
+    return { id: `${docId}#${i}`, docId, title, text: m.text, context: [title, section, opening].filter(Boolean).join(" › ") };
+  });
 }
+
+/** The text a passage is embedded with: its context, then the passage itself. */
+export const embedText = (p: Pick<Passage, "title" | "text" | "context">) => `${p.context ?? p.title}\n${p.text}`;
 
 // ------------------------------------------------------------------ vectors
 
@@ -106,7 +140,7 @@ export function keywordRank(question: string, passages: Passage[]): Array<{ id: 
   return passages
     .map((p) => {
       const words = new Set(tokens(p.text));
-      const title = new Set(tokens(p.title));
+      const title = new Set(tokens(p.context ?? p.title));
       let score = 0;
       for (const w of q) {
         if (words.has(w)) score += idf(w);

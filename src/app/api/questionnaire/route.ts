@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     // A factory sees its own document list; buyers only ever get titles (answers also carry the title).
     documents:
       session.role === "factory"
-        ? (await listDocuments(scope.orgId)).map(({ id, title, fileName }) => ({ id, title, fileName }))
+        ? (await listDocuments(scope.orgId)).map(({ id, title, fileName, validUntil }) => ({ id, title, fileName, validUntil }))
         : docsVisible
           ? FACTORY_DOCUMENTS.map(({ id, title, fileName }) => ({ id, title, fileName }))
           : [],

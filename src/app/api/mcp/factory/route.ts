@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAgentToken, touchAgentToken } from "@/lib/server/agent-tokens";
+import { resolveAgentToken, tokenRole, touchAgentToken } from "@/lib/server/agent-tokens";
 import { agentContext, FACTORY_TOOLS, HUMAN_ONLY, runFactoryTool } from "@/lib/server/factory-mcp";
 import { getSubscription } from "@/lib/server/billing";
 import { PLANS } from "@/lib/plans";
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       const bearer = req.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
       const token = await resolveAgentToken(bearer);
       if (!token) return error(body.id, -32001, "Send a valid agent token: Authorization: Bearer bnn_agent_… (make one on the factory's AI agents page).", 401);
+      if (tokenRole(token) !== "factory") return error(body.id, -32001, "This is a buyer's agent token. Buyers' agents use /api/mcp/buyer.", 401);
       if (PLANS[(await getSubscription(token.orgId)).plan].limits.agentTokens === 0) return error(body.id, -32002, "This factory's plan does not include AI agents. Upgrade to Pro in Bunon.", 402);
       await touchAgentToken(token).catch(() => undefined);
       const name = typeof body.params?.name === "string" ? body.params.name : "";
