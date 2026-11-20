@@ -56,9 +56,9 @@ Buyer's question ─────────────────────
 - **Contextual chunking:** documents are split at paragraph and sentence lines, a heading always stays with the text under it, and each passage keeps its context (document title, section heading, the document's opening sentence). The context is searched and embedded with the passage but never quoted, so a passage deep in a long policy still matches a question about that policy's subject.
 - **Evidence graph** (`/factory/evidence`): documents, the answers they back and the buyers who received them, as a graph (document → answer → buyer, and answer → reused answer). Walking it answers "if this certificate changes or expires, which answers and which buyers are affected?" It also lists answers sent without a source.
 - **Agents (MCP, two servers):** a factory can connect its own AI agent through the factory MCP server (`/api/mcp/factory`): 10 tools scoped to that factory; it can prepare answers but only a person can send them. A buyer can connect its agent to the read-only buyer MCP server (`/api/mcp/buyer`): 6 tools to read answers with their source sentence, search answers across factories and read its activity log.
-- **Compliance Action Plan** (`/factory/action-plan`): paste the old and new wording of a rule; Bunon compares them (regulatory diff), finds the documents and sent answers that rest on the old version, drafts the updated policy text and lists the fixes for a person to approve. Basic version: the change is entered by a person (a labelled demo change is filled in).
+- **Compliance Action Plan** (`/factory/action-plan`): Bunon watches a list of rules (minimum wage, wage payment, working hours, minimum age; labelled demo versions for now). When a newer version appears than the one the factory last reviewed, the page reports the change on its own and builds the plan: a regulatory diff (what changed, numbers and number words), the documents that state the old wording and those that already meet the new one, the sent answers and buyers affected, a redrafted policy passage, and a fix list. A person approves each fix; every approval and review is recorded in the activity log. Real feeds (Gazette, DIFE, EUR-Lex, buyers' codes) are next.
 - **Sample agent** (`examples/factory-agent`): a small factory agent built with the Vercel AI SDK agent loop, running Qwen locally through Ollama, using Bunon's factory MCP server as its tools.
-- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 89 automated tests.
+- **Stack:** Next.js 16 on Vercel, Cloudflare D1, TypeScript; 92 automated tests.
 
 ### Data and sovereignty strategy
 - **Whose data:** each factory's own documents and answers. Every API filters by company and link on the server; a buyer sees only answers sent to it.
@@ -115,9 +115,10 @@ Buyer's question ─────────────────────
 | Correct cited answers, local Qwen 3.5 4B (13 labelled questions) | 8 / 10, with 0 wrong drafts kept and 3 / 3 left for a person |
 | Language bias check, after fixes | Bangla 8 / 10 = English 8 / 10; Bangla search on new questions 7 / 8 vs English 6 / 8 |
 | Answer reuse (40 questions from two more buyers) | 18 / 24 repeats found, 16 / 16 look-alikes left alone, **0 wrong suggestions** |
+| Compliance Action Plan (10 labelled synthetic rule changes on the demo documents, keyword search) | 10 / 10 correct plans: 0 documents missed, 0 false alarms, 5 / 5 redrafts carry the new value. Small set; the value-matching rule was tuned on it |
 | Draft time | about 3 s per answer (local Qwen 3.5 4B) |
 | Photo of a document (a synthetic fire licence, slightly tilted) | Licence number, dates and counts read correctly by local Qwen 3.5 4B; about 1 minute on a laptop |
-| Automated tests | 89 passing; plus end-to-end checks of both MCP servers |
+| Automated tests | 92 passing; plus end-to-end checks of both MCP servers |
 
 Details and how to rerun each test: README, "Evaluation" sections.
 
