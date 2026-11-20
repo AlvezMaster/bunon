@@ -7,6 +7,8 @@ const FULL: Record<string, number> = {
   "account-0": 1139,
   "account-1": 1159,
   pricing: 963,
+  "action-plan-0": 1876,
+  "action-plan-1": 1876,
 };
 
 export const PAGE_W = 1440;

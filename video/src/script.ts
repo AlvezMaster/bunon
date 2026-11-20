@@ -241,10 +241,10 @@ export const SEGMENTS: Segment[] = [
         // The Compliance Action Plan (src/app/factory/action-plan/page.tsx), with its labelled demo rule change.
         text: "And when a rule changes, the Compliance Action Plan shows what it affects and drafts the fixes.",
         visual: {
-          kind: "screen", url: `${APP}/factory/action-plan`, role: "Factory", frames: [[0, "action-plan-0"], [0.45, "action-plan-1"]],
-          cam: [[0, 720, 450, 1.05], [0.35, 600, 600, 1.15], [0.6, 720, 900, 1.1], [0.8, 720, 1196, 1.12], [1, 720, 1450, 1.12]],
-          cursor: [[0.1, 1000, 420], [0.36, 429, 644]], clicks: [0.4],
-          callouts: [{ t: 0.62, to: 0.8, x: 720, y: 1090, text: "Policy redrafted", side: "top" }, { t: 0.84, x: 720, y: 1400, text: "Fixes for a person to approve", side: "top" }],
+          kind: "screen", url: `${APP}/factory/action-plan`, role: "Factory", frames: [[0, "action-plan-0"], [0.72, "action-plan-1"]],
+          cam: [[0, 720, 450, 1.05], [0.22, 720, 500, 1.15], [0.45, 720, 1000, 1.08], [0.62, 900, 1400, 1.15], [1, 900, 1440, 1.2]],
+          cursor: [[0.08, 1000, 300], [0.2, 1030, 537], [0.62, 1072, 1454]], clicks: [0.21, 0.68],
+          callouts: [{ t: 0.06, to: 0.3, x: 720, y: 346, text: "Changes found on its own", side: "bottom" }, { t: 0.4, to: 0.6, x: 720, y: 1217, text: "Policy redrafted", side: "top" }, { t: 0.76, x: 1000, y: 1500, text: "Approval saved to the activity log", side: "top" }],
         },
       },
     ],

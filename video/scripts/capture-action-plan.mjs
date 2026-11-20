@@ -110,13 +110,18 @@ try {
   console.log("Compliance Action Plan (local)");
   await signIn(page, FACTORY);
   await open(page, `${LOCAL}/factory/action-plan`, 2500);
-  const apBoxes = { form: "form", run: "form button[type=submit]" };
-  await shot(page, "action-plan-0", apBoxes, true);
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
-  await page.evaluate(() => document.querySelector("form button[type=submit]")?.click());
   await page.waitForFunction(() => !!document.querySelector("section[aria-label='Compliance Action Plan']"), { timeout: 30_000 });
+  // Show the weekly-hours change (a buyer's code), then approve its first fix.
+  await page.evaluate(() => [...document.querySelectorAll("#watched-title ~ ul li")].find((li) => /Weekly working hours/.test(li.textContent ?? ""))?.querySelector("button")?.click());
+  await page.waitForFunction(() => /56 hours per week/.test(document.querySelector("section[aria-label='Compliance Action Plan']")?.textContent ?? ""), { timeout: 30_000 });
   await sleep(800);
-  await shot(page, "action-plan-1", { ...apBoxes, plan: "section[aria-label='Compliance Action Plan']", draft: "section[aria-label='Compliance Action Plan'] > div:nth-child(3)", fixes: "section[aria-label='Compliance Action Plan'] > div:last-child" }, true);
+  const boxes = { rules: "#watched-title", list: "#watched-title ~ ul", plan: "section[aria-label='Compliance Action Plan']", draft: "section[aria-label='Compliance Action Plan'] > div:nth-child(3)", fixes: "section[aria-label='Compliance Action Plan'] > div:nth-child(4)", approve: "section[aria-label='Compliance Action Plan'] > div:nth-child(4) li button" };
+  await shot(page, "action-plan-0", boxes, true);
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+  await page.evaluate(() => document.querySelector("section[aria-label='Compliance Action Plan'] > div:nth-child(4) li button")?.click());
+  await page.waitForFunction(() => /activity log entry/.test(document.querySelector("section[aria-label='Compliance Action Plan']")?.textContent ?? ""), { timeout: 30_000 });
+  await sleep(600);
+  await shot(page, "action-plan-1", boxes, true);
   // Keep the other shots' boxes: merge into targets.json.
   const all = JSON.parse(readFileSync(join(OUT, "targets.json"), "utf8"));
   writeFileSync(join(OUT, "targets.json"), JSON.stringify({ ...all, ...targets }, null, 1));
